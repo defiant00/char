@@ -1,12 +1,10 @@
 package main
 
+go/
 import "fmt"
-import "fmt", "io", "dood/dood"
 
-main()
-	var myVar = nil as myClass
-	var t = true and false or false and true
-	t, _ = 3, 5
-	var x = 5
-	x += 7
-	x = x + 3
+func main() {
+	fmt.Println("Hello from Char!")
+}
+/go
+

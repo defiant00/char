@@ -10,6 +10,8 @@ import (
 const (
 	eof           = -1
 	lineComment   = "//"
+	goStart       = "go/"
+	goEnd         = "/go"
 	letters       = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	numbers       = "0123456789"
 	alphaNumeric  = letters + numbers
@@ -24,6 +26,7 @@ const (
 	tDedent                  // A decrease in indentation
 	tEOL                     // End of line
 	tEOF                     // End of file
+	tGoBlock                 // A block of Go code
 	tSLComment               // Single-line comment starting with '//'
 	tString                  // Literal string
 	tChar                    // Literal character
@@ -58,6 +61,7 @@ var tStrings = map[tType]string{
 	tDedent:     "Dedent",
 	tEOL:        "EOL",
 	tEOF:        "EOF",
+	tGoBlock:    "GoBlock",
 	tSLComment:  "SLComment",
 	tString:     "String",
 	tChar:       "Char",
@@ -256,9 +260,13 @@ type stateFn func(*lexer) stateFn
 func lexIndent(l *lexer) stateFn {
 	indent := 0
 	for {
-		if l.startsWith(lineComment) {
+		switch {
+		case l.startsWith(lineComment):
 			l.discard()
 			return lexSLComment
+		case l.startsWith(goStart):
+			l.discard()
+			return lexGoBlock
 		}
 		switch r := l.next(); r {
 		case eof:
@@ -370,6 +378,28 @@ func lexSLComment(l *lexer) stateFn {
 			l.backup()
 			l.emit(tSLComment)
 			return lexStatement
+		}
+	}
+}
+
+func lexGoBlock(l *lexer) stateFn {
+	// Consume the starting tag
+	for range goStart {
+		l.next()
+	}
+	l.discard()
+	for {
+		if l.startsWith(goEnd) {
+			l.emit(tGoBlock)
+			for range goEnd {
+				l.next()
+			}
+			l.discard()
+			return lexIndent
+		}
+		r := l.next()
+		if r == eof {
+			return l.errorf("Unclosed go/ block")
 		}
 	}
 }

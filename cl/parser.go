@@ -33,8 +33,8 @@ loop:
 			break loop
 		case tPackage:
 			e.items = append(e.items, p.parsePackage())
-		case tImport:
-			e.items = append(e.items, p.parseImport())
+		case tGoBlock:
+			e.items = append(e.items, p.parseGoBlock())
 		case tEOL:
 			p.next()
 		default:
@@ -58,29 +58,8 @@ func (p *parser) parsePackage() exprAST {
 	return errorAST{error: "No package identifier found!"}
 }
 
-func (p *parser) parseImport() exprAST {
-	i := &importAST{}
-	p.next() // Consume the import token
-	read := true
-	for read {
-		t := p.next()
-		switch t.typ {
-		case tString: // Import string on same line as import command
-			i.names = append(i.names, t.val)
-			switch p.peek().typ {
-			case tComma:
-				p.next()
-			case tEOL:
-				p.next()
-				read = false
-			default:
-				read = false
-			}
-		default:
-			return errorAST{error: "Found invalid import."}
-		}
-	}
-	return i
+func (p *parser) parseGoBlock() exprAST {
+	return &goBlockAST{code: p.next().val}
 }
 
 func parse(input string) exprAST {
