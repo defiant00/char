@@ -32,9 +32,13 @@ loop:
 		case tError, tEOF:
 			break loop
 		case tPackage:
-			e.items = append(e.items, p.parsePackage())
+			e.add(p.parsePackage())
 		case tGoBlock:
-			e.items = append(e.items, p.parseGoBlock())
+			e.add(p.parseGoBlock())
+		case tVar:
+			e.add(p.parseVariable())
+		case tNumber:
+			e.add(p.parseNumber())
 		case tEOL:
 			p.next()
 		default:
@@ -42,6 +46,30 @@ loop:
 			break loop
 		}
 	}
+	return e
+}
+
+func (p *parser) parseExpr() exprAST {
+	switch p.peek().typ {
+	case tVar:
+		return p.parseVariable()
+	case tNumber:
+		return p.parseNumber()
+	default:
+		return errorAST{error: "Found something other than an expression."}
+	}
+}
+
+func (p *parser) parseParenExpr() exprAST {
+	p.next() // Consume '('
+	e := p.parseExpr()
+
+	// todo - check for an error?
+
+	if p.peek().typ != tRightParen {
+		return errorAST{error: "Missing )"}
+	}
+	p.next() // Consume ')'
 	return e
 }
 
@@ -56,6 +84,23 @@ func (p *parser) parsePackage() exprAST {
 		return errorAST{error: "Extra token found after package identifier."}
 	}
 	return errorAST{error: "No package identifier found!"}
+}
+
+func (p *parser) parseVariable() exprAST {
+	p.next() // Consume the 'var'
+	t := p.next()
+	if t.typ == tIdentifier {
+		end := p.next()
+		if end.isLineEnd() {
+			return variableAST{name: t.val}
+		}
+		return errorAST{error: "Var found with more stuff on the line."}
+	}
+	return errorAST{error: "Var found with no variable name specified."}
+}
+
+func (p *parser) parseNumber() exprAST {
+	return numberAST{number: p.next().val}
 }
 
 func (p *parser) parseGoBlock() exprAST {

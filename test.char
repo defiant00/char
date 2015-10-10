@@ -1,5 +1,12 @@
 package main
 
+1
+2.3
+5
+
+var thing
+var another
+
 go/
 import "fmt"
 

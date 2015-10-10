@@ -296,6 +296,8 @@ func lexIndent(l *lexer) stateFn {
 func lexStatement(l *lexer) stateFn {
 	for {
 		switch {
+		case l.startsWith(goStart):
+			return lexGoBlock
 		case l.startsWith(lineComment):
 			return lexSLComment
 		case l.accept(letters):

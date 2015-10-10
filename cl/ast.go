@@ -32,6 +32,10 @@ type programAST struct {
 	items []exprAST
 }
 
+func (p *programAST) add(i exprAST) {
+	p.items = append(p.items, i)
+}
+
 func (p programAST) Print(indent int) {
 	printSpaces(indent)
 	fmt.Println("program")
@@ -55,7 +59,6 @@ type goBlockAST struct {
 func (g goBlockAST) Print(indent int) {
 	printSpaces(indent)
 	fmt.Println("[go code]")
-	fmt.Println(g.code)
 }
 
 func (g goBlockAST) GenGo() string {
@@ -73,4 +76,47 @@ func (p packageAST) Print(indent int) {
 
 func (p packageAST) GenGo() string {
 	return fmt.Sprintf("package %v", p.name)
+}
+
+type numberAST struct {
+	number string
+}
+
+func (n numberAST) Print(indent int) {
+	printSpaces(indent)
+	fmt.Printf("number %v\n", n.number)
+}
+
+func (n numberAST) GenGo() string {
+	return n.number
+}
+
+type variableAST struct {
+	name string
+}
+
+func (v variableAST) Print(indent int) {
+	printSpaces(indent)
+	fmt.Printf("variable %v\n", v.name)
+}
+
+func (v variableAST) GenGo() string {
+	return v.name
+}
+
+type binaryExprAST struct {
+	op          tType
+	left, right exprAST
+}
+
+func (b binaryExprAST) Print(indent int) {
+	b.left.Print(indent + 1)
+	fmt.Println()
+	printSpaces(indent)
+	fmt.Println(b.op)
+	b.right.Print(indent + 1)
+}
+
+func (b binaryExprAST) GenGo() string {
+	return b.left.GenGo() + " HAHAHA OPERATOR GOES HERE " + b.right.GenGo()
 }
