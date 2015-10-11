@@ -266,6 +266,7 @@ func lexIndent(l *lexer) stateFn {
 			return lexSLComment
 		case l.startsWith(goStart):
 			l.discard()
+			l.emitIndent(indent)
 			return lexGoBlock
 		}
 		switch r := l.next(); r {

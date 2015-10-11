@@ -39,8 +39,8 @@ func (p *programAST) add(i exprAST) {
 func (p programAST) Print(indent int) {
 	printSpaces(indent)
 	fmt.Println("program")
-	for _, e := range p.items {
-		e.Print(indent + 1)
+	for _, i := range p.items {
+		i.Print(indent + 1)
 	}
 }
 
@@ -78,45 +78,79 @@ func (p packageAST) GenGo() string {
 	return fmt.Sprintf("package %v", p.name)
 }
 
-type numberAST struct {
-	number string
+type importAST struct {
+	packages []string
 }
 
-func (n numberAST) Print(indent int) {
+func (i importAST) Print(indent int) {
 	printSpaces(indent)
-	fmt.Printf("number %v\n", n.number)
+	fmt.Println("import")
+	for _, p := range i.packages {
+		printSpaces(indent + 1)
+		fmt.Println(p)
+	}
 }
 
-func (n numberAST) GenGo() string {
-	return n.number
+func (i importAST) GenGo() string {
+	r := "import (\n"
+	for _, p := range i.packages {
+		r += "\"" + p + "\"\n"
+	}
+	r += ")"
+	return r
 }
 
-type variableAST struct {
-	name string
+type classAST struct {
+	name  string
+	items []exprAST
 }
 
-func (v variableAST) Print(indent int) {
+func (c classAST) Print(indent int) {
 	printSpaces(indent)
-	fmt.Printf("variable %v\n", v.name)
+	fmt.Printf("class %v\n", c.name)
+	for _, i := range c.items {
+		i.Print(indent + 1)
+	}
 }
 
-func (v variableAST) GenGo() string {
-	return v.name
+func (c classAST) GenGo() string {
+	var s string
+	for _, i := range c.items {
+		s += i.GenGo() + "\n"
+	}
+	return s
 }
 
-type binaryExprAST struct {
-	op          tType
-	left, right exprAST
+type funcDefAST struct {
+	name   string
+	static bool
 }
 
-func (b binaryExprAST) Print(indent int) {
-	b.left.Print(indent + 1)
-	fmt.Println()
+func (f funcDefAST) Print(indent int) {
 	printSpaces(indent)
-	fmt.Println(b.op)
-	b.right.Print(indent + 1)
+	if f.static {
+		fmt.Print("static ")
+	}
+	fmt.Println("function", f.name)
 }
 
-func (b binaryExprAST) GenGo() string {
-	return b.left.GenGo() + " HAHAHA OPERATOR GOES HERE " + b.right.GenGo()
+func (f funcDefAST) GenGo() string {
+	return fmt.Sprintf("func %v()\n", f.name)
+}
+
+type varDefAST struct {
+	name, typ string
+	static    bool
+}
+
+func (v varDefAST) Print(indent int) {
+	printSpaces(indent)
+	if v.static {
+		fmt.Print("static ")
+	}
+	fmt.Println("variable", v.name, v.typ)
+}
+
+func (v varDefAST) GenGo() string {
+	return fmt.Sprintf("var %v %v", v.name, v.typ)
 }

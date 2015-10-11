@@ -15,12 +15,12 @@ func (p *parser) next() token {
 	return n
 }
 
-func (p *parser) backup() {
-	p.pos--
-}
-
 func (p *parser) peek() token {
 	return p.tokens[p.pos]
+}
+
+func (p *parser) errorf(format string, args ...interface{}) exprAST {
+	return errorAST{error: fmt.Sprintf(format, args...)}
 }
 
 func (p *parser) parseProgram() exprAST {
@@ -35,41 +35,17 @@ loop:
 			e.add(p.parsePackage())
 		case tGoBlock:
 			e.add(p.parseGoBlock())
-		case tVar:
-			e.add(p.parseVariable())
-		case tNumber:
-			e.add(p.parseNumber())
+		case tImport:
+			e.add(p.parseImport())
+		case tIdentifier:
+			e.add(p.parseClass())
 		case tEOL:
 			p.next()
 		default:
-			fmt.Println("\n\n*** Unknown token", p.peek())
+			e.add(p.errorf("Unknown token %v", p.peek()))
 			break loop
 		}
 	}
-	return e
-}
-
-func (p *parser) parseExpr() exprAST {
-	switch p.peek().typ {
-	case tVar:
-		return p.parseVariable()
-	case tNumber:
-		return p.parseNumber()
-	default:
-		return errorAST{error: "Found something other than an expression."}
-	}
-}
-
-func (p *parser) parseParenExpr() exprAST {
-	p.next() // Consume '('
-	e := p.parseExpr()
-
-	// todo - check for an error?
-
-	if p.peek().typ != tRightParen {
-		return errorAST{error: "Missing )"}
-	}
-	p.next() // Consume ')'
 	return e
 }
 
@@ -86,21 +62,109 @@ func (p *parser) parsePackage() exprAST {
 	return errorAST{error: "No package identifier found!"}
 }
 
-func (p *parser) parseVariable() exprAST {
-	p.next() // Consume the 'var'
+func (p *parser) parseImport() exprAST {
+	i := &importAST{}
+	p.next() // Consume the import token
 	t := p.next()
-	if t.typ == tIdentifier {
-		end := p.next()
-		if end.isLineEnd() {
-			return variableAST{name: t.val}
+	switch t.typ {
+	case tString:
+		i.packages = append(i.packages, t.val)
+		t = p.next()
+		if t.typ != tEOL {
+			return p.errorf("Not an EOL: %v", t)
 		}
-		return errorAST{error: "Var found with more stuff on the line."}
+	case tEOL:
+		t = p.next()
+		if t.typ != tIndent {
+			return p.errorf("Import found with no package name or indented list.")
+		}
+		for {
+			t = p.next()
+			if t.typ == tDedent {
+				break
+			}
+			if t.typ != tString {
+				return p.errorf("Not a package name: %v", t)
+			}
+			i.packages = append(i.packages, t.val)
+			t = p.next()
+			if t.typ != tEOL {
+				return p.errorf("Not an EOL: %v", t)
+			}
+			for p.peek().typ == tEOL {
+				p.next()
+			}
+		}
 	}
-	return errorAST{error: "Var found with no variable name specified."}
+	return i
 }
 
-func (p *parser) parseNumber() exprAST {
-	return numberAST{number: p.next().val}
+func (p *parser) parseClass() exprAST {
+	c := &classAST{}
+	t := p.next() // Consume the identifier
+	c.name = t.val
+	t = p.next()
+	if t.typ != tEOL {
+		return p.errorf("Not an EOL: %v", t)
+	}
+	for p.peek().typ == tEOL {
+		p.next()
+	}
+	t = p.next()
+	if t.typ != tIndent {
+		return p.errorf("Not an indent: %v", t)
+	}
+loop:
+	for {
+		switch p.peek().typ {
+		case tEOL:
+			p.next()
+		case tIdentifier:
+			c.items = append(c.items, p.parseClassIdentifier(false))
+		case tDot:
+			p.next() // Consume the dot
+			if p.peek().typ != tIdentifier {
+				c.items = append(c.items, p.errorf("Not an identifier: %v", p.peek()))
+				return c
+			}
+			c.items = append(c.items, p.parseClassIdentifier(true))
+		case tDedent:
+			p.next()
+			break loop
+		default:
+			c.items = append(c.items, p.errorf("Expecting a method or variable, found %v", p.peek()))
+			return c
+		}
+	}
+	return c
+}
+
+func (p *parser) parseClassIdentifier(dotted bool) exprAST {
+	t := p.next()
+	if p.peek().typ == tLeftParen {
+		p.next() // Consume (
+		if p.peek().typ != tRightParen {
+			return p.errorf("Not right paren: %v", p.peek())
+		}
+		p.next() // Consume )
+		t2 := p.next()
+		if t2.typ != tEOL {
+			return p.errorf("Not an EOL: %v", t2)
+		}
+		for p.peek().typ == tEOL {
+			p.next()
+		}
+		t2 = p.next()
+		if t2.typ != tIndent {
+			return p.errorf("Not an indent: %v", t2)
+		}
+		return funcDefAST{name: t.val, static: !dotted}
+	}
+	typ := p.next()
+	if typ.typ != tIdentifier {
+		return p.errorf("Not an identifier: %v", typ)
+	}
+	return varDefAST{name: t.val, typ: typ.val, static: !dotted}
 }
 
 func (p *parser) parseGoBlock() exprAST {

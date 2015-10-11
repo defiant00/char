@@ -1,17 +1,44 @@
 package main
 
-1
-2.3
-5
-
-var thing
-var another
-
-go/
 import "fmt"
+import
+	"io"
+	"bufio"
 
-func main() {
-	fmt.Println("Hello from Char!")
-}
-/go
+main
+	staticProp int
+	.memberProp string
+	
+	main()
+		go/
+		fmt.Println("Hello from char!")
+		/go
+	
+		var x
+		x = 3
+	
+		go/
+		fmt.Println("x is ", x)
+		/go
+	
+		x = x + 2 * 3
+	
+		go/
+		fmt.Println("x is now ", x)
+		/go
 
+		var s = "hello from a string"
+		go/
+		fmt.Println("string says", s)
+		/go
+	
+		var c = 'c'
+		go/
+		fmt.Println("character is", c)
+		/go
+	
+		var b = true
+		b = b or false
+		go/
+		fmt.Println("b is", b)
+		/go
