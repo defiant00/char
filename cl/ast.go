@@ -65,19 +65,6 @@ func (g goBlockAST) GenGo() string {
 	return g.code
 }
 
-type packageAST struct {
-	name string
-}
-
-func (p packageAST) Print(indent int) {
-	printSpaces(indent)
-	fmt.Printf("package %v\n", p.name)
-}
-
-func (p packageAST) GenGo() string {
-	return fmt.Sprintf("package %v", p.name)
-}
-
 type importAST struct {
 	packages []string
 }

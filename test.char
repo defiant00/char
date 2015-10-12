@@ -1,4 +1,4 @@
-package main
+go/package main/go
 
 import "fmt"
 import
@@ -17,28 +17,18 @@ main
 		var x
 		x = 3
 	
-		go/
-		fmt.Println("x is ", x)
-		/go
+		go/fmt.Println("x is ", x)/go
 	
 		x = x + 2 * 3
 	
-		go/
-		fmt.Println("x is now ", x)
-		/go
+		go/fmt.Println("x is now ", x)/go
 
 		var s = "hello from a string"
-		go/
-		fmt.Println("string says", s)
-		/go
+		go/fmt.Println("string says", s)/go
 	
 		var c = 'c'
-		go/
-		fmt.Println("character is", c)
-		/go
+		go/fmt.Println("character is", c)/go
 	
 		var b = true
 		b = b or false
-		go/
-		fmt.Println("b is", b)
-		/go
+		go/fmt.Println("b is", b)/go

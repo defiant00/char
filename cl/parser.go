@@ -31,8 +31,6 @@ loop:
 		switch p.peek().typ {
 		case tError, tEOF:
 			break loop
-		case tPackage:
-			e.add(p.parsePackage())
 		case tGoBlock:
 			e.add(p.parseGoBlock())
 		case tImport:
@@ -47,19 +45,6 @@ loop:
 		}
 	}
 	return e
-}
-
-func (p *parser) parsePackage() exprAST {
-	p.next() // Consume the package token
-	t := p.next()
-	if t.typ == tIdentifier {
-		end := p.next()
-		if end.isLineEnd() {
-			return packageAST{name: t.val}
-		}
-		return errorAST{error: "Extra token found after package identifier."}
-	}
-	return errorAST{error: "No package identifier found!"}
 }
 
 func (p *parser) parseImport() exprAST {

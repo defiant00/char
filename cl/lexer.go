@@ -33,7 +33,6 @@ const (
 	tNumber                  // Literal number
 	tIdentifier              // Identifier
 	tKeyword                 // Everything below this token is a keyword
-	tPackage                 // 'package'
 	tImport                  // 'import'
 	tVar                     // 'var'
 	tAs                      // 'as'
@@ -68,7 +67,6 @@ var tStrings = map[tType]string{
 	tNumber:     "Number",
 	tIdentifier: "Identifier",
 	tKeyword:    "Keyword",
-	tPackage:    "Package",
 	tImport:     "Import",
 	tVar:        "Var",
 	tAs:         "As",
@@ -109,15 +107,14 @@ var opKeywords = map[string]tType{
 }
 
 var resKeywords = map[string]tType{
-	"package": tPackage,
-	"import":  tImport,
-	"var":     tVar,
-	"as":      tAs,
-	"nil":     tNil,
-	"true":    tTrue,
-	"false":   tFalse,
-	"and":     tAnd,
-	"or":      tOr,
+	"import": tImport,
+	"var":    tVar,
+	"as":     tAs,
+	"nil":    tNil,
+	"true":   tTrue,
+	"false":  tFalse,
+	"and":    tAnd,
+	"or":     tOr,
 }
 
 type token struct {
@@ -134,7 +131,7 @@ func (t token) String() string {
 	switch t.typ {
 	case tEOL:
 		return fmt.Sprintf("(%v) %v\n", t.line, t.typ)
-	case tEOF, tIndent, tDedent, tDot, tComma, tLeftParen, tRightParen, tAssign, tAdd, tSubtract, tMultiply, tDivide, tMod, tAny, tPackage, tImport, tVar, tAs, tNil, tTrue, tFalse, tAnd, tOr:
+	case tEOF, tIndent, tDedent, tDot, tComma, tLeftParen, tRightParen, tAssign, tAdd, tSubtract, tMultiply, tDivide, tMod, tAny, tImport, tVar, tAs, tNil, tTrue, tFalse, tAnd, tOr:
 		return fmt.Sprintf("(%v) %v", t.line, t.typ)
 	default:
 		return fmt.Sprintf("(%v) %v : '%v'", t.line, t.typ, t.val)
