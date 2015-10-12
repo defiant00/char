@@ -33,8 +33,8 @@ loop:
 			break loop
 		case tGoBlock:
 			e.add(p.parseGoBlock())
-		case tImport:
-			e.add(p.parseImport())
+		case tUse:
+			e.add(p.parseUse())
 		case tIdentifier:
 			e.add(p.parseClass())
 		case tEOL:
@@ -47,41 +47,38 @@ loop:
 	return e
 }
 
-func (p *parser) parseImport() exprAST {
-	i := &importAST{}
-	p.next() // Consume the import token
+func (p *parser) parseUse() exprAST {
+	u := &useAST{}
+	p.next() // Consume the use token
 	t := p.next()
-	switch t.typ {
-	case tString:
-		i.packages = append(i.packages, t.val)
+	if t.typ != tEOL {
+		return p.errorf("Not an EOL: %v", t)
+	}
+	for p.peek().typ == tEOL {
+		p.next()
+	}
+	t = p.next()
+	if t.typ != tIndent {
+		return p.errorf("Not an indent: %v", t)
+	}
+	for {
+		t = p.next()
+		if t.typ == tDedent {
+			break
+		}
+		if t.typ != tString {
+			return p.errorf("Not a package name: %v", t)
+		}
+		u.packages = append(u.packages, t.val)
 		t = p.next()
 		if t.typ != tEOL {
 			return p.errorf("Not an EOL: %v", t)
 		}
-	case tEOL:
-		t = p.next()
-		if t.typ != tIndent {
-			return p.errorf("Import found with no package name or indented list.")
-		}
-		for {
-			t = p.next()
-			if t.typ == tDedent {
-				break
-			}
-			if t.typ != tString {
-				return p.errorf("Not a package name: %v", t)
-			}
-			i.packages = append(i.packages, t.val)
-			t = p.next()
-			if t.typ != tEOL {
-				return p.errorf("Not an EOL: %v", t)
-			}
-			for p.peek().typ == tEOL {
-				p.next()
-			}
+		for p.peek().typ == tEOL {
+			p.next()
 		}
 	}
-	return i
+	return u
 }
 
 func (p *parser) parseClass() exprAST {

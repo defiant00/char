@@ -65,22 +65,22 @@ func (g goBlockAST) GenGo() string {
 	return g.code
 }
 
-type importAST struct {
+type useAST struct {
 	packages []string
 }
 
-func (i importAST) Print(indent int) {
+func (u useAST) Print(indent int) {
 	printSpaces(indent)
-	fmt.Println("import")
-	for _, p := range i.packages {
+	fmt.Println("use")
+	for _, p := range u.packages {
 		printSpaces(indent + 1)
 		fmt.Println(p)
 	}
 }
 
-func (i importAST) GenGo() string {
+func (u useAST) GenGo() string {
 	r := "import (\n"
-	for _, p := range i.packages {
+	for _, p := range u.packages {
 		r += "\"" + p + "\"\n"
 	}
 	r += ")"
