@@ -3,8 +3,8 @@ Char is planned to be a programming language similar to Go but with a syntax clo
 
 Currently in a very early experimental state.
 
-## Current Syntax*
-### *very subject to change
+### Current Syntax*
+##### *very subject to change
 
 ```
 // An example Char file, this is a comment.
