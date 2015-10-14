@@ -4,7 +4,7 @@ Char is planned to be a programming language similar to Go but with a syntax clo
 Currently in a very early experimental state.
 
 ### Current Syntax*
-##### *very subject to change
+###### *very subject to change
 
 ```
 // An example Char file, this is a comment.
@@ -15,11 +15,6 @@ use							// Similar to Go-style imports
 	"io"
 
 main						// The name of the class
-	StaticProp  int			// A public, static integer property of the main class,
-							//   indicated by the leading capital letter.
-	.memberProp string		// A string property of an instance of the main class,
-							//   indicated by the leading dot.
-	
 	main()					// Function declaration, static due to no leading dot.
 		var x				// All variables must be declared with var before use.
 		var s = "hello"		// Variables can be initialized during declaration.
@@ -32,4 +27,25 @@ main						// The name of the class
 		fmt.Println("Hello from Char!")			//   of Go code directly into Char
 		/go										//   for the time being, and will
 												//   hopefully be removed later.
+
+// A public class due to the first letter being uppercase
+MyClass
+	const									// Class constants
+		greeting = "Hello from Char!"		// String constant
+		First = iota						// Like Go, iota starts at 0 per const
+		Second								//   block and constants without an
+		Third								//   assignment use the prior one.
+	
+	privateProp int				// A private property since first letter is lowercase.
+	PublicProp  string			// A public property since first letter is uppercase.
+	
+	print()							// A static function, referenced by MyClass.print()
+		var s = myClass.greeting	// Getting a constant. Only done here because we
+		go/							//   have to use a Go block right now to print.
+		fmt.Println(s)
+		/go
+	
+	.Add(v1, v2 int) int				// A method, referenced by (my class instance).Add
+		privateProp += v1 * v2			//   Parameter and return types specified the same
+		return privateProp				//   as Go.
 ```
