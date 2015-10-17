@@ -1,34 +1,53 @@
 go/package main/go
 
-use
+// An example Char file, this is a comment.
+// Blocks are specified via indentation, and tabs are interpreted as four spaces.
+
+use							// Similar to Go-style imports
 	"fmt"
 	"io"
-	"bufio"
 
-main
-	staticProp int
-	.memberProp string
+main						// The name of the class
+	main()					// Function declaration, static due to no leading dot.
+		var x				// All variables must be declared with var before use.
+		var s = "hello"		// Variables can be initialized during declaration.
+		x = 3				// Assignment
+		x = x + 3			// Basic math
+		var b = true		// Boolean
+		b = b or false		// Keywords 'and' and 'or'
+		var c, d
+		c, d = 3, 4
+		var e, f = 5, "thing"
+		e, f = c + d, "another"
+		
+		go/										// Go blocks allow the embedding
+		fmt.Println("Hello from Char!")			//   of Go code directly into Char
+		/go										//   for the time being, and will
+												//   hopefully be removed later.
+
+// A public class due to the first letter being uppercase
+MyClass
+	// A comment within a class
+	const									// Class constants
+		greeting = "Hello from Char!"		// String constant
+		First = iota						// Like Go, iota starts at 0 per const
+		Second								//   block and constants without an
+		Third								//   assignment use the prior one.
 	
-	main()
-		go/
-		fmt.Println("Hello from char!")
+	privateProp int				// A private property since first letter is lowercase.
+	PublicProp  string			// A public property since first letter is uppercase.
+	
+	
+	// My print function
+	print()							// A static function, referenced by MyClass.print()
+		var s = myClass.greeting	// Getting a constant. Only done here because we
+		go/							//   have to use a Go block right now to print.
+		fmt.Println(s)
 		/go
 	
-		var x
-		x = 3
-	
-		go/fmt.Println("x is ", x)/go
-	
-		x = x + 2 * 3
-	
-		go/fmt.Println("x is now ", x)/go
-
-		var s = "hello from a string"
-		go/fmt.Println("string says", s)/go
-	
-		var c = 'c'
-		go/fmt.Println("character is", c)/go
-	
-		var b = true
-		b = b or false
-		go/fmt.Println("b is", b)/go
+	.Add(v1, v2 int) int				// A method, referenced by (my class instance).Add
+		privateProp += v1 * v2			//   Parameter and return types specified the same
+		return privateProp				//   as Go.
+		
+	.RetTwo(b bool, s string) (string, bool)
+		return s, b

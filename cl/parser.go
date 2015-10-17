@@ -7,6 +7,7 @@ import (
 type parser struct {
 	tokens []token // All tokens
 	pos    int     // Current position in tokens
+	run    bool    // Whether the parser is running
 }
 
 func (p *parser) next() token {
@@ -19,156 +20,282 @@ func (p *parser) peek() token {
 	return p.tokens[p.pos]
 }
 
-func (p *parser) errorf(format string, args ...interface{}) exprAST {
-	return errorAST{error: fmt.Sprintf(format, args...)}
+func (p *parser) errorf(format string, args ...interface{}) genAST {
+	p.run = false
+	return &errorAST{error: fmt.Sprintf(format, args...)}
 }
 
-func (p *parser) parseProgram() exprAST {
-	e := &programAST{}
-	// Build the AST
+func (p *parser) acceptTokens(types ...tType) (bool, []token) {
+	start := p.pos
+	var tokens []token
+	var typ tType
 loop:
-	for {
-		switch p.peek().typ {
-		case tError, tEOF:
-			break loop
-		case tGoBlock:
-			e.add(p.parseGoBlock())
-		case tUse:
-			e.add(p.parseUse())
-		case tIdentifier:
-			e.add(p.parseClass())
+	for len(types) > 0 {
+		typ = types[0]
+		cur := p.next()
+		// Eat any comments
+		for cur.typ == tSLComment {
+			cur = p.next()
+		}
+		switch typ {
 		case tEOL:
-			p.next()
+			if cur.typ == tEOL {
+				types = types[1:]
+				tokens = append(tokens, cur)
+				// Eat any extra EOLs or comments.
+				for p.peek().typ == tEOL || p.peek().typ == tSLComment {
+					p.next()
+				}
+			} else {
+				tokens = append(tokens, cur) // Append current token on error for better errors.
+				break loop
+			}
+		case cur.typ:
+			types = types[1:]
+			tokens = append(tokens, cur)
 		default:
-			e.add(p.errorf("Unknown token %v", p.peek()))
+			tokens = append(tokens, cur) // Append current token on error for better errors.
 			break loop
 		}
 	}
-	return e
+	if len(types) == 0 {
+		return true, tokens
+	}
+
+	p.pos = start
+	return false, tokens
 }
 
-func (p *parser) parseUse() exprAST {
-	u := &useAST{}
-	p.next() // Consume the use token
-	t := p.next()
-	if t.typ != tEOL {
-		return p.errorf("Not an EOL: %v", t)
-	}
-	for p.peek().typ == tEOL {
-		p.next()
-	}
-	t = p.next()
-	if t.typ != tIndent {
-		return p.errorf("Not an indent: %v", t)
-	}
-	for {
-		t = p.next()
-		if t.typ == tDedent {
-			break
-		}
-		if t.typ != tString {
-			return p.errorf("Not a package name: %v", t)
-		}
-		u.packages = append(u.packages, t.val)
-		t = p.next()
-		if t.typ != tEOL {
-			return p.errorf("Not an EOL: %v", t)
-		}
-		for p.peek().typ == tEOL {
+func (p *parser) parseFile() genAST {
+	f := &fileAST{}
+	for p.run {
+		switch p.peek().typ {
+		case tEOF:
+			p.run = false
+		case tEOL, tSLComment:
 			p.next()
+		case tGoBlock:
+			f.addStmt(p.parseGoBlock())
+		case tUse:
+			f.addStmt(p.parseUse())
+		case tIdentifier:
+			f.addStmt(p.parseClass())
+		default:
+			f.addStmt(p.errorf("Unknown token %v", p.peek()))
 		}
+	}
+	return f
+}
+
+func (p *parser) parseGoBlock() genAST {
+	return &goBlockAST{block: p.next().val}
+}
+
+func (p *parser) parseUse() genAST {
+	u := &useAST{}
+	succ, toks := p.acceptTokens(tUse, tEOL, tIndent)
+	if !succ {
+		return p.errorf("Invalid token in a use: %v", toks[len(toks)-1])
+	}
+	// Eat the use statements.
+	succ, toks = p.acceptTokens(tString, tEOL)
+	for succ {
+		u.addPkg(toks[0].val)
+		succ, toks = p.acceptTokens(tString, tEOL)
+	}
+	// Eat the dedent.
+	succ, toks = p.acceptTokens(tDedent)
+	if !succ {
+		return p.errorf("Invalid token in a use: %v", toks[len(toks)-1])
 	}
 	return u
 }
 
-func (p *parser) parseClass() exprAST {
+func (p *parser) parseClass() genAST {
 	c := &classAST{}
-	t := p.next() // Consume the identifier
-	c.name = t.val
-	t = p.next()
-	if t.typ != tEOL {
-		return p.errorf("Not an EOL: %v", t)
+	succ, toks := p.acceptTokens(tIdentifier, tEOL, tIndent)
+	if !succ {
+		return p.errorf("Invalid token in a class definition: %v", toks[len(toks)-1])
 	}
-	for p.peek().typ == tEOL {
-		p.next()
-	}
-	t = p.next()
-	if t.typ != tIndent {
-		return p.errorf("Not an indent: %v", t)
-	}
+	c.name = toks[0].val
+
 loop:
-	for {
+	for p.run {
 		switch p.peek().typ {
-		case tEOL:
-			p.next()
-		case tIdentifier:
-			c.items = append(c.items, p.parseClassIdentifier(false))
-		case tDot:
-			p.next() // Consume the dot
-			if p.peek().typ != tIdentifier {
-				c.items = append(c.items, p.errorf("Not an identifier: %v", p.peek()))
-				return c
-			}
-			c.items = append(c.items, p.parseClassIdentifier(true))
 		case tDedent:
 			p.next()
 			break loop
+		case tIdentifier:
+			t := p.next()
+			switch p.peek().typ {
+			case tLeftParen:
+				c.addStmt(p.parseFunction(t.val, true))
+			case tIdentifier:
+				c.addStmt(&classVarAST{name: t.val, typ: p.parseExpr()})
+				succ, _ = p.acceptTokens(tEOL)
+				if !succ {
+					c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
+				}
+			default:
+				c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
+			}
+		case tDot:
+			succ, toks = p.acceptTokens(tDot, tIdentifier, tLeftParen)
+			if !succ {
+				c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, toks[len(toks)-1]))
+				break loop
+			}
+			c.addStmt(p.parseFunction(toks[1].val, false))
+		case tConst:
+			c.addStmt(p.parseConsts())
 		default:
-			c.items = append(c.items, p.errorf("Expecting a method or variable, found %v", p.peek()))
-			return c
+			c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
 		}
 	}
 	return c
 }
 
-func (p *parser) parseClassIdentifier(dotted bool) exprAST {
-	t := p.next()
-	if p.peek().typ == tLeftParen {
-		p.next() // Consume (
-		if p.peek().typ != tRightParen {
-			return p.errorf("Not right paren: %v", p.peek())
+func (p *parser) parseConsts() genAST {
+	succ, toks := p.acceptTokens(tConst, tEOL, tIndent)
+	if succ {
+		c := &constAST{}
+	loop:
+		for p.run {
+			switch p.peek().typ {
+			case tDedent:
+				p.next()
+				break loop
+			case tEOL, tSLComment:
+				p.next()
+			default:
+				c.addDef(p.parseExpr())
+			}
 		}
-		p.next() // Consume )
-		t2 := p.next()
-		if t2.typ != tEOL {
-			return p.errorf("Not an EOL: %v", t2)
-		}
-		for p.peek().typ == tEOL {
+		return c
+	} else {
+		return p.errorf("Invalid token in constant: %v", toks[len(toks)-1])
+	}
+}
+
+func (p *parser) parseFunction(name string, static bool) genAST {
+	p.next() // Eat the '('
+	f := &funcAST{name: name, static: static}
+
+	// TODO - Parameters
+
+	succ, toks := p.acceptTokens(tRightParen, tEOL, tIndent)
+	if !succ {
+		return p.errorf("Invalid token in function definition: %v", toks[len(toks)-1])
+	}
+
+	for p.peek().typ != tDedent && p.run {
+		switch p.peek().typ {
+		case tVar:
+			f.addExpr(p.parseVarDeclaration())
+		case tEOL, tSLComment:
 			p.next()
+		case tGoBlock:
+			f.addExpr(p.parseGoBlock())
+		default:
+			f.addExpr(p.parseExpr())
 		}
-		t2 = p.next()
-		if t2.typ != tIndent {
-			return p.errorf("Not an indent: %v", t2)
-		}
-		return funcDefAST{name: t.val, static: !dotted}
 	}
-	typ := p.next()
-	if typ.typ != tIdentifier {
-		return p.errorf("Not an identifier: %v", typ)
-	}
-	return varDefAST{name: t.val, typ: typ.val, static: !dotted}
+	// Eat the dedent.
+	p.next()
+
+	return f
 }
 
-func (p *parser) parseGoBlock() exprAST {
-	return &goBlockAST{code: p.next().val}
+func (p *parser) parsePrimaryExpr() exprAST {
+	switch p.peek().typ {
+	case tIdentifier:
+		return p.parseIdentExpr()
+	case tString:
+		return p.parseStringExpr()
+	case tNumber:
+		return p.parseNumberExpr()
+	default:
+		return p.errorf("Token is not an expression: %v", p.peek())
+	}
 }
 
-func parse(input string) exprAST {
-	p := &parser{}
+func (p *parser) parseExpr() exprAST {
+	lhs := p.parsePrimaryExpr()
+	if !p.run {
+		return lhs
+	}
+
+	return p.parseBinopRHS(0, lhs)
+}
+
+func (p *parser) parseBinopRHS(exprPrec int, lhs exprAST) exprAST {
+	var rhs exprAST
+	for p.run {
+		tokPrec := p.peek().precedence()
+
+		// If this is a binary operator that binds as tightly as the
+		// current one, consume it. Otherwise we're done.
+		if tokPrec < exprPrec {
+			return lhs
+		}
+
+		op := p.next()
+
+		rhs = p.parsePrimaryExpr()
+		if !p.run {
+			return rhs // An error, so rhs should hold the error message
+		}
+
+		// If binop binds less tightly with RHS than the operator after RHS,
+		// let the pending op take RHS as its LHS.
+		nextPrec := p.peek().precedence()
+		if tokPrec < nextPrec {
+			rhs = p.parseBinopRHS(tokPrec+1, rhs)
+			if !p.run {
+				return rhs // An error, rhs should hold the error message
+			}
+		}
+
+		// Merge lhs/rhs
+		lhs = &binaryExprAST{op: op.typ, left: lhs, right: rhs}
+	}
+	return rhs // An error, rhs should hold the error message
+}
+
+func (p *parser) parseVarDeclaration() exprAST {
+	// Eat 'var'
+	p.next()
+	return &varDeclareAST{initial: p.parseExpr()}
+}
+
+func (p *parser) parseIdentExpr() exprAST {
+	return &identExprAST{name: p.next().val}
+}
+
+func (p *parser) parseStringExpr() exprAST {
+	return &stringExprAST{val: p.next().val}
+}
+
+func (p *parser) parseNumberExpr() exprAST {
+	return &numberExprAST{val: p.next().val}
+}
+
+func parse(input string) genAST {
+	p := &parser{run: true}
 	l := lex(input)
 	var t token
 
-	// Read all non-comment tokens into a slice.
+	// Read all tokens into a slice.
 	for {
 		t = l.nextToken()
-		if t.typ != tSLComment {
-			p.tokens = append(p.tokens, t)
-		}
-		fmt.Print(" ", t)
+		p.tokens = append(p.tokens, t)
+		//fmt.Print(" ", t)
 		if t.typ == tError || t.typ == tEOF {
 			break
 		}
 	}
-
-	return p.parseProgram()
+	if t.typ == tError {
+		return p.errorf("Error token encountered: %v", t)
+	}
+	return p.parseFile()
 }

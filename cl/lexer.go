@@ -35,23 +35,16 @@ const (
 	tKeyword                 // Everything below this token is a keyword
 	tUse                     // 'use'
 	tVar                     // 'var'
-	tAs                      // 'as'
-	tNil                     // 'nil'
-	tTrue                    // 'true'
-	tFalse                   // 'false'
-	tAnd                     // 'and'
-	tOr                      // 'or'
-	tDot                     // '.'
-	tComma                   // ','
+	tConst                   // 'const'
 	tLeftParen               // '('
 	tRightParen              // ')'
+	tDot                     // '.'
+	tComma                   // ','
 	tAssign                  // '='
+	tAddAssign               // '+='
 	tAdd                     // '+'
-	tSubtract                // '-'
 	tMultiply                // '*'
-	tDivide                  // '/'
-	tMod                     // '%'
-	tAny                     // '_'
+	tOr                      // 'or'
 )
 
 var tStrings = map[tType]string{
@@ -69,23 +62,26 @@ var tStrings = map[tType]string{
 	tKeyword:    "Keyword",
 	tUse:        "Use",
 	tVar:        "Var",
-	tAs:         "As",
-	tNil:        "Nil",
-	tTrue:       "True",
-	tFalse:      "False",
-	tAnd:        "And",
-	tOr:         "Or",
-	tDot:        "Dot",
-	tComma:      "Comma",
+	tConst:      "Const",
 	tLeftParen:  "LeftParen",
 	tRightParen: "RightParen",
+	tDot:        "Dot",
+	tComma:      "Comma",
 	tAssign:     "Assign",
+	tAddAssign:  "AddAssign",
 	tAdd:        "Add",
-	tSubtract:   "Subtract",
 	tMultiply:   "Multiply",
-	tDivide:     "Divide",
-	tMod:        "Mod",
-	tAny:        "Any",
+	tOr:         "Or",
+}
+
+var tPrecedences = map[tType]int{
+	tAssign:    10,
+	tAddAssign: 10,
+	tComma:     20,
+	tAdd:       30,
+	tMultiply:  40,
+	tOr:        80,
+	tDot:       100,
 }
 
 func (t tType) String() string {
@@ -93,27 +89,20 @@ func (t tType) String() string {
 }
 
 var opKeywords = map[string]tType{
-	".": tDot,
-	",": tComma,
-	"(": tLeftParen,
-	")": tRightParen,
-	"=": tAssign,
-	"+": tAdd,
-	"-": tSubtract,
-	"*": tMultiply,
-	"/": tDivide,
-	"%": tMod,
-	"_": tAny,
+	"(":  tLeftParen,
+	")":  tRightParen,
+	".":  tDot,
+	",":  tComma,
+	"=":  tAssign,
+	"+=": tAddAssign,
+	"+":  tAdd,
+	"*":  tMultiply,
 }
 
 var resKeywords = map[string]tType{
 	"use":   tUse,
 	"var":   tVar,
-	"as":    tAs,
-	"nil":   tNil,
-	"true":  tTrue,
-	"false": tFalse,
-	"and":   tAnd,
+	"const": tConst,
 	"or":    tOr,
 }
 
@@ -123,19 +112,23 @@ type token struct {
 	val  string
 }
 
-func (t token) isLineEnd() bool {
-	return t.typ == tEOL || t.typ == tEOF
-}
-
 func (t token) String() string {
 	switch t.typ {
 	case tEOL:
 		return fmt.Sprintf("(%v) %v\n", t.line, t.typ)
-	case tEOF, tIndent, tDedent, tDot, tComma, tLeftParen, tRightParen, tAssign, tAdd, tSubtract, tMultiply, tDivide, tMod, tAny, tUse, tVar, tAs, tNil, tTrue, tFalse, tAnd, tOr:
+	case tEOF, tIndent, tDedent, tLeftParen, tRightParen, tDot, tComma, tAssign, tAddAssign, tAdd, tMultiply, tUse, tVar, tConst, tOr:
 		return fmt.Sprintf("(%v) %v", t.line, t.typ)
 	default:
 		return fmt.Sprintf("(%v) %v : '%v'", t.line, t.typ, t.val)
 	}
+}
+
+func (t token) precedence() int {
+	p := tPrecedences[t.typ]
+	if p <= 0 {
+		return -1
+	}
+	return p
 }
 
 type lexer struct {
