@@ -40,12 +40,12 @@ MyClass
 	PublicProp  string			// A public property since first letter is uppercase.
 	
 	print()							// A static function, referenced by MyClass.print()
-		var s = myClass.greeting	// Getting a constant. Only done here because we
+		var s = MyClass.greeting	// Getting a constant. Only done here because we
 		go/							//   have to use a Go block right now to print.
 		fmt.Println(s)
 		/go
 	
-	.Add(v1, v2 int) int				// A method, referenced by (my class instance).Add
-		privateProp += v1 * v2			//   Parameter and return types specified the same
-		return privateProp				//   as Go.
+	.Add(v1, v2 int) int				// Starting dot indicates a method. Parameters and
+		privateProp += v1 * v2			//   return types specified the same as Go.
+		return this.privateProp			//   Can use an implicit or explicit 'this'
 ```
