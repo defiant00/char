@@ -1,0 +1,39 @@
+// normal if
+if 3 > 5
+	print("nope")
+
+// if with with
+if 3 > x with var x = getX()
+	print("small x is", x)
+
+// if/is with implicit true
+if
+	is 3 > 5
+		print("nope")
+	is _
+		print("yup")
+
+// if/is with explicit expression to match
+if c
+	is '\n', 'a'
+		print("newline or a")
+	is 'b', 'c'
+		print("b or c")
+
+// if/is with explicit expression and with
+if w with var w = getW(1, 2)
+	is 7
+		print("Lucky 7")
+	is 8
+		print("eight")
+	is _
+		print("something else")
+
+// if/is with implicit true and with
+if with var z = calcSomething(1, 2, 3)
+	is z > 3
+		print("more than 3")
+	is z < 1
+		print("less than 1")
+	is _
+		print("some other number")
