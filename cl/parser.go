@@ -130,24 +130,27 @@ loop:
 			switch p.peek().typ {
 			case tLeftParen:
 				c.addStmt(p.parseFunction(t.val, true))
-			case tIdentifier:
-				c.addStmt(&classVarAST{name: t.val, typ: p.parseExpr()})
-				succ, _ = p.acceptTokens(tEOL)
-				if !succ {
-					c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
-				}
 			default:
-				c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
+				c.addStmt(p.parseConst(t.val))
 			}
 		case tDot:
-			succ, toks = p.acceptTokens(tDot, tIdentifier, tLeftParen)
+			succ, toks = p.acceptTokens(tDot, tIdentifier)
 			if !succ {
 				c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, toks[len(toks)-1]))
 				break loop
 			}
-			c.addStmt(p.parseFunction(toks[1].val, false))
-		case tConst:
-			c.addStmt(p.parseConsts())
+			switch p.peek().typ {
+			case tLeftParen:
+				c.addStmt(p.parseFunction(toks[1].val, false))
+			case tIdentifier:
+				c.addStmt(&propertyAST{name: toks[1].val, typ: p.parseType()})
+				succ, toks = p.acceptTokens(tEOL)
+				if !succ {
+					c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, toks[len(toks)-1]))
+				}
+			default:
+				c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
+			}
 		default:
 			c.addStmt(p.errorf("Invalid token in class %v: %v", c.name, p.peek()))
 		}
@@ -155,37 +158,79 @@ loop:
 	return c
 }
 
-func (p *parser) parseConsts() genAST {
-	succ, toks := p.acceptTokens(tConst, tEOL, tIndent)
+func (p *parser) parseConst(name string) genAST {
+	c := &constAST{name: name}
+	succ, toks := p.acceptTokens(tEOL)
 	if succ {
-		c := &constAST{}
-	loop:
-		for p.run {
-			switch p.peek().typ {
-			case tDedent:
-				p.next()
-				break loop
-			case tEOL, tSLComment:
-				p.next()
-			default:
-				c.addDef(p.parseExpr())
-			}
-		}
 		return c
-	} else {
-		return p.errorf("Invalid token in constant: %v", toks[len(toks)-1])
 	}
+
+	succ, toks = p.acceptTokens(tAssign)
+	if !succ {
+		return p.errorf("Invalid token in class constant %v: %v", name, toks[len(toks)-1])
+	}
+
+	c.val = p.parseExpr()
+
+	succ, toks = p.acceptTokens(tEOL)
+	if !succ {
+		return p.errorf("Invalid token in class constant %v: %v", name, toks[len(toks)-1])
+	}
+
+	return c
+}
+
+func (p *parser) parseType() exprAST {
+	succ, toks := p.acceptTokens(tIdentifier)
+	if !succ {
+		return p.errorf("Invalid token in type: %v", toks[len(toks)-1])
+	}
+	var expr exprAST = &identExprAST{name: toks[0].val}
+	succ, toks = p.acceptTokens(tDot, tIdentifier)
+	for succ && p.run {
+		expr = &binaryExprAST{left: expr, right: &identExprAST{name: toks[1].val}, op: tDot}
+		succ, toks = p.acceptTokens(tDot, tIdentifier)
+	}
+	return expr
 }
 
 func (p *parser) parseFunction(name string, static bool) genAST {
 	p.next() // Eat the '('
 	f := &funcAST{name: name, static: static}
 
-	// TODO - Parameters
+	// Parameters
+	for p.peek().typ != tRightParen && p.run {
+		t := p.next()
+		if t.typ != tIdentifier {
+			return p.errorf("Invalid token in function definition: %v", t)
+		}
+		if p.peek().typ == tComma {
+			p.next() // Eat ','
+			f.addParam(t.val, nil)
+		} else {
+			f.addParam(t.val, p.parseType())
+			p.acceptTokens(tComma) // Eat the comma if it's there.
+		}
+	}
 
-	succ, toks := p.acceptTokens(tRightParen, tEOL, tIndent)
+	succ, toks := p.acceptTokens(tRightParen)
 	if !succ {
-		return p.errorf("Invalid token in function definition: %v", toks[len(toks)-1])
+		return p.errorf("Invalid token in function %v: %v", name, toks[len(toks)-1])
+	}
+
+	// Check if EOL, if not then we have a return type.
+	succ, toks = p.acceptTokens(tEOL)
+	if !succ {
+		f.returns = p.parseExpr()
+		succ, toks = p.acceptTokens(tEOL)
+		if !succ {
+			return p.errorf("Invalid token in function %v: %v", name, toks[len(toks)-1])
+		}
+	}
+
+	succ, toks = p.acceptTokens(tIndent)
+	if !succ {
+		return p.errorf("Invalid token in function %v: %v", name, toks[len(toks)-1])
 	}
 
 	for p.peek().typ != tDedent && p.run {
@@ -208,6 +253,8 @@ func (p *parser) parseFunction(name string, static bool) genAST {
 
 func (p *parser) parsePrimaryExpr() exprAST {
 	switch p.peek().typ {
+	case tLeftParen:
+		return p.parseParenExpr()
 	case tIdentifier:
 		return p.parseIdentExpr()
 	case tString:
@@ -266,6 +313,17 @@ func (p *parser) parseVarDeclaration() exprAST {
 	// Eat 'var'
 	p.next()
 	return &varDeclareAST{initial: p.parseExpr()}
+}
+
+func (p *parser) parseParenExpr() exprAST {
+	p.next() // Eat '('
+	expr := p.parseExpr()
+
+	succ, toks := p.acceptTokens(tRightParen)
+	if !succ {
+		return p.errorf("Invalid token in (): %v", toks[len(toks)-1])
+	}
+	return expr
 }
 
 func (p *parser) parseIdentExpr() exprAST {

@@ -12,9 +12,9 @@ type exprAST interface {
 	genAST
 }
 
-func printSpaces(count int) {
+func printIndent(count int) {
 	for i := 0; i < count; i++ {
-		fmt.Print("  ")
+		fmt.Print("|   ")
 	}
 }
 
@@ -24,7 +24,7 @@ type errorAST struct {
 }
 
 func (e errorAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println(e.error)
 }
 
@@ -34,7 +34,7 @@ type fileAST struct {
 }
 
 func (f fileAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("file")
 	for _, s := range f.statements {
 		s.Print(indent + 1)
@@ -51,10 +51,10 @@ type useAST struct {
 }
 
 func (u useAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("use")
 	for _, p := range u.packages {
-		printSpaces(indent + 1)
+		printIndent(indent + 1)
 		fmt.Println(p)
 	}
 }
@@ -69,7 +69,7 @@ type goBlockAST struct {
 }
 
 func (g goBlockAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("[Go Block]")
 }
 
@@ -80,7 +80,7 @@ type classAST struct {
 }
 
 func (c classAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("class", c.name)
 	for _, s := range c.statements {
 		s.Print(indent + 1)
@@ -95,22 +95,54 @@ func (c *classAST) addStmt(stmt genAST) {
 type funcAST struct {
 	name        string
 	static      bool
+	params      []paramAST
+	returns     exprAST
 	expressions []exprAST
 }
 
 func (f funcAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	if f.static {
 		fmt.Print("static ")
 	}
 	fmt.Println("function", f.name)
+	if len(f.params) > 0 {
+		printIndent(indent + 1)
+		fmt.Println("parameters")
+		for _, p := range f.params {
+			p.Print(indent + 2)
+		}
+	}
+	if f.returns != nil {
+		printIndent(indent + 1)
+		fmt.Println("returns")
+		f.returns.Print(indent + 2)
+	}
 	for _, e := range f.expressions {
 		e.Print(indent + 1)
 	}
 }
 
+func (f *funcAST) addParam(name string, typ exprAST) {
+	f.params = append(f.params, paramAST{name: name, typ: typ})
+}
+
 func (f *funcAST) addExpr(expr exprAST) {
 	f.expressions = append(f.expressions, expr)
+}
+
+// A function parameter.
+type paramAST struct {
+	name string
+	typ  exprAST
+}
+
+func (p paramAST) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(p.name)
+	if p.typ != nil {
+		p.typ.Print(indent + 1)
+	}
 }
 
 // The AST for a 'var' declaration expression.
@@ -119,7 +151,7 @@ type varDeclareAST struct {
 }
 
 func (v varDeclareAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("variable")
 	v.initial.Print(indent + 1)
 }
@@ -130,7 +162,7 @@ type identExprAST struct {
 }
 
 func (i identExprAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("identifier", i.name)
 }
 
@@ -140,7 +172,7 @@ type stringExprAST struct {
 }
 
 func (s stringExprAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("string", s.val)
 }
 
@@ -150,7 +182,7 @@ type numberExprAST struct {
 }
 
 func (n numberExprAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println("number", n.val)
 }
 
@@ -161,37 +193,47 @@ type binaryExprAST struct {
 }
 
 func (b binaryExprAST) Print(indent int) {
-	printSpaces(indent)
+	printIndent(indent)
 	fmt.Println(b.op)
 	b.left.Print(indent + 1)
 	b.right.Print(indent + 1)
 }
 
-// The AST for a constant block.
+// The AST for a class constant.
 type constAST struct {
-	defs []exprAST
+	name string
+	val  exprAST
 }
 
 func (c constAST) Print(indent int) {
-	printSpaces(indent)
-	fmt.Println("constant")
-	for _, d := range c.defs {
-		d.Print(indent + 1)
+	printIndent(indent)
+	fmt.Println("const", c.name)
+	if c.val != nil {
+		c.val.Print(indent + 1)
 	}
 }
 
-func (c *constAST) addDef(d exprAST) {
-	c.defs = append(c.defs, d)
-}
-
 // The AST for a class variable.
-type classVarAST struct {
+type propertyAST struct {
 	name string
 	typ  exprAST
 }
 
-func (c classVarAST) Print(indent int) {
-	printSpaces(indent)
-	fmt.Println("class var", c.name)
-	c.typ.Print(indent + 1)
+func (p propertyAST) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("property", p.name)
+	p.typ.Print(indent + 1)
+}
+
+// The AST for a return statement.
+type returnAST struct {
+	val exprAST
+}
+
+func (r returnAST) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("return")
+	if r.val != nil {
+		r.val.Print(indent + 1)
+	}
 }

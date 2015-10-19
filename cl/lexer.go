@@ -35,7 +35,7 @@ const (
 	tKeyword                 // Everything below this token is a keyword
 	tUse                     // 'use'
 	tVar                     // 'var'
-	tConst                   // 'const'
+	tReturn                  // 'return'
 	tLeftParen               // '('
 	tRightParen              // ')'
 	tDot                     // '.'
@@ -62,7 +62,7 @@ var tStrings = map[tType]string{
 	tKeyword:    "Keyword",
 	tUse:        "Use",
 	tVar:        "Var",
-	tConst:      "Const",
+	tReturn:     "Return",
 	tLeftParen:  "LeftParen",
 	tRightParen: "RightParen",
 	tDot:        "Dot",
@@ -100,10 +100,10 @@ var opKeywords = map[string]tType{
 }
 
 var resKeywords = map[string]tType{
-	"use":   tUse,
-	"var":   tVar,
-	"const": tConst,
-	"or":    tOr,
+	"use":    tUse,
+	"var":    tVar,
+	"return": tReturn,
+	"or":     tOr,
 }
 
 type token struct {
@@ -116,7 +116,7 @@ func (t token) String() string {
 	switch t.typ {
 	case tEOL:
 		return fmt.Sprintf("(%v) %v\n", t.line, t.typ)
-	case tEOF, tIndent, tDedent, tLeftParen, tRightParen, tDot, tComma, tAssign, tAddAssign, tAdd, tMultiply, tUse, tVar, tConst, tOr:
+	case tEOF, tIndent, tDedent, tLeftParen, tRightParen, tDot, tComma, tAssign, tAddAssign, tAdd, tMultiply, tUse, tVar, tReturn, tOr:
 		return fmt.Sprintf("(%v) %v", t.line, t.typ)
 	default:
 		return fmt.Sprintf("(%v) %v : '%v'", t.line, t.typ, t.val)
