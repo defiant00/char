@@ -38,6 +38,26 @@ if with var z = calcSomething(1, 2, 3)
 	is _
 		print("some other number")
 
+// for loop goes through all items in an iterable
+for v in vals
+	v.doThing()
+
+// range generates an iterable set of numbers
+for i in range(10)
+	print(i)
+
+// equivalent to a while
+loop
+	if cond
+		break
+	// do some
+	// stuff
+
+// equivalent to a do while
+loop
+	// do some stuff
+	if cond
+		break
 
 MyClass
 	// Names starting with a dot are members/methods. Classes cannot have static members
