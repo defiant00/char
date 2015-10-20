@@ -5,12 +5,5 @@ use
 
 main
 	main()
-		var v, s = main.doThing(1 + 2 * 7, 2), "dood"
-		main.test()
-		go/fmt.Println(v, s)/go
-		
-	doThing(a, b int) int
-		return a + b
-	
-	test() int
-		return 42
+		var x = 3 == 4 or false and true
+		go/fmt.Println("Hello, Char! X is", x)/go

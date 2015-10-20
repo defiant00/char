@@ -20,11 +20,9 @@ func Build(path string) {
 	file := parse(input)
 	fmt.Println("\n")
 	file.Print(0)
-	/*
-		fmt.Println("\n\nSaving .go file")
-		err = ioutil.WriteFile("test.go", []byte(file.GenGo()), 0644)
-		if err != nil {
-			panic(err)
-		}
-	*/
+	fmt.Println("\n\nSaving .go file...")
+	err = ioutil.WriteFile("../test/test.go", []byte(file.GenGo()), 0644)
+	if err != nil {
+		panic(err)
+	}
 }

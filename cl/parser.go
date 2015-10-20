@@ -275,6 +275,8 @@ func (p *parser) parsePrimaryExpr() exprAST {
 		return p.parseStringExpr()
 	case tNumber:
 		return p.parseNumberExpr()
+	case tTrue, tFalse:
+		return p.parseBoolExpr()
 	default:
 		return p.errorf("Token is not an expression: %v", p.peek())
 	}
@@ -363,6 +365,11 @@ func (p *parser) parseStringExpr() exprAST {
 
 func (p *parser) parseNumberExpr() exprAST {
 	return &numberExprAST{val: p.next().val}
+}
+
+func (p *parser) parseBoolExpr() exprAST {
+	t := p.next()
+	return &boolExprAST{val: t.typ == tTrue}
 }
 
 func parse(input string) genAST {
