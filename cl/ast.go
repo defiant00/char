@@ -237,3 +237,17 @@ func (r returnAST) Print(indent int) {
 		r.val.Print(indent + 1)
 	}
 }
+
+// The AST for a function call.
+type funcCallExprAST struct {
+	name string
+	args exprAST
+}
+
+func (f funcCallExprAST) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("call func", f.name)
+	if f.args != nil {
+		f.args.Print(indent + 1)
+	}
+}

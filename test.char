@@ -1,49 +1,16 @@
 go/package main/go
 
-// An example Char file, this is a comment.
-// Blocks are specified via indentation, and tabs are interpreted as four spaces.
-
-use							// Similar to Go-style imports
+use
 	"fmt"
-	"io"
 
-// A public class due to the first letter being uppercase
-MyClass
-	// Names starting with a dot are members/methods. Classes cannot have static members
-	//   so this is how constants are defined.
-	greeting = "Hello from Char!"		// String constant
-	First = iota						// Like Go, iota starts at 0 and constants
-	Second								//   without an assignment use the prior one.
-	Third
-	
-	iota						// iota on its own line resets it to zero
-	AnotherFirst = iota
-	AnotherSecond
-	
-	.privateProp int			// A private property since first letter is lowercase.
-	.PublicProp  main.MyClass		// A public property since first letter is uppercase.
-	
-	
-	// My print function
-	print()	string						// A static function, referenced by MyClass.print()
-		var s = myClass.greeting	// Both ways to get a constant. Only done here because
-		s = greeting				// we have to use a Go block right now to print.
-		go/
-		fmt.Println(s)
-		/go
-	
-	printNum(x, y int.bob.dood, z string, aardvark bool)
-		go/
-		fmt.Println(x)
-		/go
-	
-	.localThing()
-		var x = 3
-		return
-	
-	.Add(v1, v2 int) int				// A method, referenced by (my class instance).Add
-		privateProp += v1 * v2			//   Parameter and return types specified the same
-		return privateProp				//   as Go.
+main
+	main()
+		var v, s = main.doThing(1 + 2 * 7, 2), "dood"
+		main.test()
+		go/fmt.Println(v, s)/go
 		
-	.RetTwo(b bool, s string) (string, bool)
-		return s, b
+	doThing(a, b int) int
+		return a + b
+	
+	test() int
+		return 42

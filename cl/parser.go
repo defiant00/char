@@ -241,6 +241,20 @@ func (p *parser) parseFunction(name string, static bool) genAST {
 			p.next()
 		case tGoBlock:
 			f.addExpr(p.parseGoBlock())
+		case tReturn:
+			p.next() // Eat 'return'
+			r := &returnAST{}
+			succ, _ = p.acceptTokens(tEOL)
+			if !succ {
+				r.val = p.parseExpr()
+				succ, toks = p.acceptTokens(tEOL)
+				if !succ {
+					f.addExpr(p.errorf("Invalid token in function %v: %v", name, toks[len(toks)-1]))
+				}
+			}
+			if p.run {
+				f.addExpr(r)
+			}
 		default:
 			f.addExpr(p.parseExpr())
 		}
@@ -327,7 +341,20 @@ func (p *parser) parseParenExpr() exprAST {
 }
 
 func (p *parser) parseIdentExpr() exprAST {
-	return &identExprAST{name: p.next().val}
+	t := p.next()
+	if p.peek().typ == tLeftParen {
+		p.next() // Eat '('
+		f := &funcCallExprAST{name: t.val}
+		if p.peek().typ != tRightParen {
+			f.args = p.parseExpr()
+		}
+		t := p.next() // Eat ')'
+		if t.typ != tRightParen {
+			return p.errorf("Invalid token in function call %v: %v", f.name, t)
+		}
+		return f
+	}
+	return &identExprAST{name: t.val}
 }
 
 func (p *parser) parseStringExpr() exprAST {

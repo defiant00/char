@@ -37,3 +37,16 @@ if with var z = calcSomething(1, 2, 3)
 		print("less than 1")
 	is _
 		print("some other number")
+
+
+MyClass
+	// Names starting with a dot are members/methods. Classes cannot have static members
+	//   so this is how constants are defined.
+	greeting = "Hello from Char!"		// String constant
+	First = iota						// Like Go, iota starts at 0 and constants
+	Second								//   without an assignment use the prior one.
+	Third
+	
+	iota								// iota on its own line resets it to zero
+	AnotherFirst = iota
+	AnotherSecond
