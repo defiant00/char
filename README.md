@@ -11,6 +11,7 @@ The core tenets guiding the syntax are as follows:
 * Special characters to help the compiler are a waste of typing time.
 * Any place where you have to repeat a leading keyword should also allow an indented block.
 * When switching a single statement to an indented block, you shouldn't have to rewrite the command itself.
+
 ### Characters
 ```
 newline             = ? the Unicode code point U+000A ?
