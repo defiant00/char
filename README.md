@@ -1,51 +1,67 @@
-# Char
-Char is planned to be a programming language similar to Go but with a syntax closer to Python.
+# Char Language Specification
+## General
+Char is intended as a general-purpose language with a focus on readability and conciseness without resorting to a a large number of operators and special characters.
 
-Currently in a very early experimental state.
-
-### Current Syntax*
-###### *very subject to change
-
+The core tenets guiding the syntax are as follows:
+* There should be a single, clear way to do a task.
+* An expression should read as a sentence.
+* Keywords are preferred over operators if they are of similar length.
+* Reducing typing time is important.
+* Things that can be inferred by the compiler should be, unless it hampers readability.
+* Special characters to help the compiler are a waste of typing time.
+* Any place where you have to repeat a leading keyword should also allow an indented block.
+* When switching a single statement to an indented block, you shouldn't have to rewrite the command itself.
+### Characters
 ```
-// An example Char file, this is a comment.
-// Blocks are specified via indentation, and tabs are interpreted as four spaces.
+newline             = ? the Unicode code point U+000A ?
+unicode_char        = ? any Unicode code point except newline ?
+unicode_letter      = ? a Unicode code point classified as "Letter" ?
+unicode_digit       = ? a Unicode code point classified as "Decimal Digit" ?
 
-use							// Similar to Go-style imports
-	"fmt"
-	"io"
+identifier_letter   = unicode_letter | "_"
+```
+### Indentation
+Char lexes input following the off-side rule. Any increase in indentation generates an *IDENT* token, and a decrease generates a *DEDENT* as long as the new indentation lines up with a previous indentation level.
 
-main						// The name of the class
-	main()					// Function declaration, static due to no leading dot.
-		var x				// All variables must be declared with var before use.
-		var s = "hello"		// Variables can be initialized during declaration.
-		x = 3				// Assignment
-		x = x + 3			// Basic math
-		var b = true		// Boolean
-		b = b or false		// Keywords 'and' and 'or'
-		
-		go/										// Go blocks allow the embedding
-		fmt.Println("Hello from Char!")			//   of Go code directly into Char
-		/go										//   for the time being, and will
-												//   hopefully be removed later.
+Both spaces and tabs are supported; during lexing, tabs are treated as four spaces. Tabs are recommended, but this is not enforced by the compiler.
+## Lexical Elements
+### Comments
+```
+line_comment    = ";" { unicode_char } newline
+block_comment   = ";;" { unicode_char | newline } ";;"
+```
+```
+; A single-line comment
+;; This is
+a block
+comment ;;
+```
+### Identifiers
+```
+identifier  = unicode_letter { identifier_letter | unicode_digit }
+```
+```
+a
+b12
+another_ident2
+αβ
+```
+### Keywords
+### Operators
+## Control Structures
+### Conditionals
+```
+"if" expression [ "with" expression ]
+    ? code to execute ?
 
-// A public class due to the first letter being uppercase
-MyClass
-	const									// Class constants
-		greeting = "Hello from Char!"		// String constant
-		First = iota						// Like Go, iota starts at 0 per const
-		Second								//   block and constants without an
-		Third								//   assignment use the prior one.
-	
-	privateProp int				// A private property since first letter is lowercase.
-	PublicProp  string			// A public property since first letter is uppercase.
-	
-	print()							// A static function, referenced by MyClass.print()
-		var s = MyClass.greeting	// Getting a constant. Only done here because we
-		go/							//   have to use a Go block right now to print.
-		fmt.Println(s)
-		/go
-	
-	.Add(v1, v2 int) int				// Starting dot indicates a method. Parameters and
-		privateProp += v1 * v2			//   return types specified the same as Go.
-		return this.privateProp			//   Can use an implicit or explicit 'this'
+"if" [ expression ] [ "with" expression ]
+    "is" expression
+        ? code to execute ?
+    "is" expression "," expression
+        ? code to execute ?
+    "is _"
+        ? default code to execute ?
+```
+### Loops
+```
 ```
