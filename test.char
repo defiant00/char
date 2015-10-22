@@ -1,9 +1,6 @@
-go/package main/go
-
-use
-	"fmt"
+use "fmt"
 
 main
 	main()
-		var x = 3 == 4 or false and true
+		var x = 3
 		go/fmt.Println("Hello, Char! X is", x)/go
