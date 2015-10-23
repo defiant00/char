@@ -41,7 +41,7 @@ comment ;;
 ```
 ### Identifiers
 ```
-identifier = identifier_letter { identifier_letter | unicode_digit }
+identifier = unicode_letter { identifier_letter | unicode_digit }
 ```
 ```
 a

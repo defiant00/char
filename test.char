@@ -2,5 +2,6 @@ use "fmt"
 
 main
 	main()
-		var x = 3
-		go/fmt.Println("Hello, Char! X is", x)/go
+		var x = 32.17
+		var s = "hello"
+		var c = 'c'

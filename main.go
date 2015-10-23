@@ -6,7 +6,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Char Compiler v0.01 Pre-Alpha")
+	fmt.Println("Char Compiler v0.05 Pre-Alpha")
 	compiler.Build("c:/GoWorkspace/src/github.com/defiant00/char")
 	fmt.Println("\nDone")
 }
