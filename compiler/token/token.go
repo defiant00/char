@@ -18,6 +18,7 @@ const (
 	DEDENT                    // a decrease in indentation
 	EOL                       // the end of a line of code
 	EOF                       // the end of the file
+	SLCOMMENT                 // single-line comment
 	STRING                    // a literal string
 	CHAR                      // a literal character
 	NUMBER                    // a literal number
@@ -37,6 +38,7 @@ var tStrings = map[Type]string{
 	DEDENT:     "Dedent",
 	EOL:        "EOL",
 	EOF:        "EOF",
+	SLCOMMENT:  "SLComment",
 	STRING:     "String",
 	CHAR:       "Character",
 	NUMBER:     "Number",
@@ -66,7 +68,7 @@ func (t Token) String() string {
 	switch t.Type {
 	case EOL:
 		return fmt.Sprintf("%v %v\n", t.Pos, t.Type)
-	case STRING, CHAR, NUMBER, IDENTIFIER, ERROR:
+	case SLCOMMENT, STRING, CHAR, NUMBER, IDENTIFIER, ERROR:
 		return fmt.Sprintf("%v %v : '%v'", t.Pos, t.Type, t.Val)
 	default:
 		return fmt.Sprintf("%v %v", t.Pos, t.Type)

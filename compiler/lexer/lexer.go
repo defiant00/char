@@ -24,6 +24,7 @@ type Lexer struct {
 	pos          int              // Current position in the input
 	widths       *data.Stack      // Width of the runes read from the stack since the last emit
 	tokens       chan token.Token // Channel of scanned tokens
+	inStmt       bool             // Whether we are currently in a statement
 }
 
 func (l *Lexer) next() rune {
@@ -135,6 +136,7 @@ func (l *Lexer) NextToken() token.Token {
 
 // lexIndent lexes the initial indentation of a line
 func lexIndent(l *Lexer) stateFn {
+	l.inStmt = false
 	indent := 0
 	for {
 		switch r := l.next(); r {
@@ -149,6 +151,10 @@ func lexIndent(l *Lexer) stateFn {
 			indent++
 		case '\t':
 			indent += 4
+		case ';':
+			l.backup()
+			l.discard()
+			return lexSLComment
 		default:
 			l.backup()
 			l.discard()
@@ -163,7 +169,9 @@ func lexStatement(l *Lexer) stateFn {
 	for {
 		switch r := l.peek(); {
 		case r == eof:
-			l.emit(token.EOL)
+			if l.inStmt {
+				l.emit(token.EOL)
+			}
 			l.emitIndent(0)
 			l.emit(token.EOF)
 		case r == ' ' || r == '\t' || r == '\r':
@@ -171,22 +179,42 @@ func lexStatement(l *Lexer) stateFn {
 			l.discard()
 		case r == '\n':
 			l.next()
-			l.emit(token.EOL)
+			if l.inStmt {
+				l.emit(token.EOL)
+			}
 			return lexIndent
+		case r == ';':
+			return lexSLComment
 		case r == '"':
+			l.inStmt = true
 			return lexString
 		case r == '\'':
+			l.inStmt = true
 			return lexChar
 		case unicode.IsLetter(r):
+			l.inStmt = true
 			return lexIdentifier
 		case unicode.IsDigit(r):
+			l.inStmt = true
 			return lexNumber
 		case l.accept(operatorChars):
+			l.inStmt = true
 			return lexOperator
 		default:
 			l.errorf("Invalid rune %c encountered.", r)
 		}
 	}
+}
+
+func lexSLComment(l *Lexer) stateFn {
+	l.next() // Eat the ;
+	l.discard()
+	for r := l.peek(); r != eof && r != '\r' && r != '\n'; {
+		l.next()
+		r = l.peek()
+	}
+	l.emit(token.SLCOMMENT)
+	return lexStatement
 }
 
 func lexIdentifier(l *Lexer) stateFn {

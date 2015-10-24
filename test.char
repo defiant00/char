@@ -1,7 +1,8 @@
-use "fmt"
+; use something
+use	"fmt" ; fmt maybe
 
+; main class
 main
-	main()
-		var x = 32.17
-		var s = "hello"
-		var c = 'c'
+	main() ; my main function
+		; do some stuff
+		var x = 3 ; set x

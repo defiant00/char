@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 )
 
-func Parse(file string) {
+func Parse(file string, printTokens bool) {
 	fmt.Println("Parsing file", file)
 
 	dat, err := ioutil.ReadFile(file)
@@ -24,12 +24,14 @@ func Parse(file string) {
 	// Read all tokens into a slice.
 	for {
 		t = l.NextToken()
-		fmt.Print(" ", t)
+		if printTokens {
+			fmt.Print(" ", t)
+		}
 		if t.Type == token.ERROR || t.Type == token.EOF {
 			break
 		}
 	}
 	if t.Type == token.ERROR {
-		//fmt.Printf("Error token encountered: %v", t)
+		fmt.Printf("\n\n%v\n", t)
 	}
 }

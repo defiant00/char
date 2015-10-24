@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-func Build(path string) {
+func Build(path string, build, format, printTokens, printAST bool) {
 	fmt.Println("Building", path)
 
 	d, err := os.Open(path)
@@ -23,7 +23,7 @@ func Build(path string) {
 
 	for _, file := range files {
 		if file.Mode().IsRegular() && filepath.Ext(file.Name()) == ".char" {
-			parser.Parse(filepath.Join(path, file.Name()))
+			parser.Parse(filepath.Join(path, file.Name()), printTokens)
 		}
 	}
 	/*
