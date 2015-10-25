@@ -1,5 +1,7 @@
-use "fmt" as f
-
 use
-	"test1"
-	"test2" as t
+	"fmt"
+	"io" as i
+	"test" t
+	"test2" as t2
+use
+	"fmt"

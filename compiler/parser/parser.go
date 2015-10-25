@@ -49,17 +49,37 @@ func Parse(file string, printTokens bool) ast.General {
 		}
 	}
 	if t.Type == token.ERROR {
-		return p.errorStmt("\n\n%v\n", t)
+		return p.errorStmt(false, "\n\n%v\n", t)
 	}
 	return p.parseFile()
 }
 
-func (p *parser) errorStmt(format string, args ...interface{}) ast.Statement {
+func (p *parser) errorStmt(toNextLine bool, format string, args ...interface{}) ast.Statement {
+	p.toNextLine(toNextLine)
 	return &ast.Error{Val: fmt.Sprintf(format, args...)}
 }
 
-func (p *parser) errorExpr(format string, args ...interface{}) ast.Expression {
+func (p *parser) errorExpr(toNextLine bool, format string, args ...interface{}) ast.Expression {
+	p.toNextLine(toNextLine)
 	return &ast.Error{Val: fmt.Sprintf(format, args...)}
+}
+
+func (p *parser) toNextLine(toNextLine bool) {
+	if !toNextLine {
+		return
+	}
+
+	t := p.peek().Type
+	for t != token.EOL && t != token.EOF {
+		p.next()
+		t = p.peek().Type
+	}
+	if t == token.EOL {
+		p.next()
+		for p.peek().Type == token.DEDENT {
+			p.next()
+		}
+	}
 }
 
 func (p *parser) peek() token.Token {
@@ -67,7 +87,7 @@ func (p *parser) peek() token.Token {
 }
 
 func (p *parser) next() token.Token {
-	t := p.tokens[p.pos]
+	t := p.peek()
 	p.pos++
 	return t
 }
@@ -97,7 +117,7 @@ func (p *parser) parseFile() ast.General {
 		case token.USE:
 			f.AddStmt(p.parseUse())
 		default:
-			return p.errorStmt("Unknown token %v", p.peek())
+			f.AddStmt(p.errorStmt(true, "Unknown token %v", p.peek()))
 		}
 	}
 	return f
@@ -106,23 +126,23 @@ func (p *parser) parseFile() ast.General {
 func (p *parser) parseUse() ast.Statement {
 	p.next() // eat token.USE
 	u := &ast.Use{}
-	succ, toks := p.accept(token.EOL, token.INDENT)
+	succ, _ := p.accept(token.EOL, token.INDENT)
 	if succ {
-		err, pack, alias, _ := p.parseUsePackage()
+		err, pack, alias, errTok := p.parseUsePackage()
 		for !err {
 			u.AddPackage(pack, alias)
-			err, pack, alias, _ = p.parseUsePackage()
+			err, pack, alias, errTok = p.parseUsePackage()
 		}
-		succ, toks = p.accept(token.DEDENT)
+		succ, _ = p.accept(token.DEDENT)
 		if succ {
 			return u
 		}
-		return p.errorStmt("Unknown token found when parsing Use: %v", toks[0])
+		return p.errorStmt(true, "Unknown token found when parsing Use: %v", errTok)
 	}
 
 	err, pack, alias, errTok := p.parseUsePackage()
 	if err {
-		return p.errorStmt("Unknown token found when parsing Use: %v", errTok)
+		return p.errorStmt(true, "Unknown token found when parsing Use: %v", errTok)
 	}
 	u.AddPackage(pack, alias)
 

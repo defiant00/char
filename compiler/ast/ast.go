@@ -33,7 +33,7 @@ func (e *Error) isExpr() {}
 
 func (e *Error) Print(indent int) {
 	printIndent(indent)
-	fmt.Println(e.Val)
+	fmt.Printf("ERROR: %v\n", e.Val)
 }
 
 type File struct {
