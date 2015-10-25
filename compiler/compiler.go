@@ -23,7 +23,11 @@ func Build(path string, build, format, printTokens, printAST bool) {
 
 	for _, file := range files {
 		if file.Mode().IsRegular() && filepath.Ext(file.Name()) == ".char" {
-			parser.Parse(filepath.Join(path, file.Name()), printTokens)
+			ast := parser.Parse(filepath.Join(path, file.Name()), printTokens)
+			if printAST {
+				fmt.Println("\n\nAST")
+				ast.Print(1)
+			}
 		}
 	}
 	/*

@@ -1,8 +1,5 @@
-; use something
-use	"fmt" ; fmt maybe
+use "fmt" as f
 
-; main class
-main
-	main() ; my main function
-		; do some stuff
-		var x = 3 ; set x
+use
+	"test1"
+	"test2" as t

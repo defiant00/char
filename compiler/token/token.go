@@ -25,6 +25,7 @@ const (
 	IDENTIFIER                // an identifier
 	keyword_start             //
 	USE                       // 'use'
+	AS                        // 'as'
 	VAR                       // 'var'
 	LEFTPAREN                 // '('
 	RIGHTPAREN                // ')'
@@ -44,6 +45,7 @@ var tStrings = map[Type]string{
 	NUMBER:     "Number",
 	IDENTIFIER: "Identifier",
 	USE:        "Use",
+	AS:         "As",
 	VAR:        "Var",
 	LEFTPAREN:  "(",
 	RIGHTPAREN: ")",
@@ -52,6 +54,7 @@ var tStrings = map[Type]string{
 
 var Keywords = map[string]Type{
 	"use": USE,
+	"as":  AS,
 	"var": VAR,
 	"(":   LEFTPAREN,
 	")":   RIGHTPAREN,
