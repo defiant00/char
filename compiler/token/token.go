@@ -27,6 +27,7 @@ const (
 	USE                       // 'use'
 	AS                        // 'as'
 	WITH                      // 'with'
+	FUNCTION                  // 'func'
 	VAR                       // 'var'
 	DOT                       // '.'
 	COMMA                     // ','
@@ -52,6 +53,7 @@ var tStrings = map[Type]string{
 	USE:        "Use",
 	AS:         "As",
 	WITH:       "With",
+	FUNCTION:   "Func",
 	VAR:        "Var",
 	DOT:        ".",
 	COMMA:      ",",
@@ -66,6 +68,7 @@ var Keywords = map[string]Type{
 	"use":  USE,
 	"as":   AS,
 	"with": WITH,
+	"func": FUNCTION,
 	"var":  VAR,
 	".":    DOT,
 	",":    COMMA,

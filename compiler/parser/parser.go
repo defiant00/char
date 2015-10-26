@@ -94,6 +94,10 @@ func (p *parser) next() token.Token {
 	return t
 }
 
+func (p *parser) backup(count int) {
+	p.pos -= count
+}
+
 func (p *parser) accept(types ...token.Type) (bool, []token.Token) {
 	start := p.pos
 	var tokens []token.Token
@@ -117,7 +121,9 @@ func (p *parser) parseFile() ast.General {
 		case token.EOF:
 			p.next()
 		case token.IDENTIFIER:
-			f.AddStmt(p.parseClass())
+			f.AddStmt(p.parseTopLevelIdent())
+		case token.FUNCTION:
+			f.AddStmt(p.parseTypeRedirect())
 		case token.USE:
 			f.AddStmt(p.parseUse())
 		default:
@@ -125,6 +131,81 @@ func (p *parser) parseFile() ast.General {
 		}
 	}
 	return f
+}
+
+func (p *parser) parseTopLevelIdent() ast.Statement {
+	p.next() // eat identifier
+	t := p.next()
+	p.backup(2)
+	if t.Type == token.DOT || t.Type == token.AS {
+		return p.parseTypeRedirect()
+	}
+	return p.parseClass()
+}
+
+func (p *parser) parseTypeRedirect() ast.Statement {
+	t := &ast.TypeRedirect{Type: p.parseType()}
+
+	succ, toks := p.accept(token.AS)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in type redirect: %v", toks[len(toks)-1])
+	}
+
+	succ, toks = p.accept(token.IDENTIFIER, token.EOL)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in type redirect: %v", toks[len(toks)-1])
+	}
+	t.Name = toks[0].Val
+	return t
+}
+
+func (p *parser) parseType() ast.Statement {
+	if p.peek().Type == token.IDENTIFIER {
+		return p.parseIdentifier()
+	}
+	return p.parseAnonFuncType()
+}
+
+func (p *parser) parseAnonFuncType() ast.Statement {
+	a := &ast.AnonFuncType{}
+
+	// func(types)
+	succ, toks := p.accept(token.FUNCTION, token.LEFTPAREN)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in anonymous function: %v", toks[len(toks)-1])
+	}
+	for p.peek().Type != token.RIGHTPAREN {
+		a.AddParam(p.parseType())
+		switch p.peek().Type {
+		case token.COMMA:
+			p.next() // eat ,
+		case token.RIGHTPAREN:
+		default:
+			return p.errorStmt(true, "Unknown token in anonymous function: %v", p.peek())
+		}
+	}
+	p.next() // eat )
+
+	// return value(s)
+	switch p.peek().Type {
+	case token.IDENTIFIER, token.FUNCTION:
+		a.AddReturn(p.parseType())
+	case token.LEFTPAREN:
+		p.next() // eat (
+		for p.peek().Type != token.RIGHTPAREN {
+			a.AddReturn(p.parseType())
+			switch p.peek().Type {
+			case token.COMMA:
+				p.next() // eat ,
+			case token.RIGHTPAREN:
+			default:
+				return p.errorStmt(true, "Unknown token in anonymous function: %v", p.peek())
+			}
+		}
+		p.next() // eat )
+	}
+
+	return a
 }
 
 func (p *parser) parseClass() ast.Statement {
@@ -177,8 +258,8 @@ func (p *parser) parseClass() ast.Statement {
 	return c
 }
 
-func (p *parser) parseIdentifier() ast.Identifier {
-	i := ast.Identifier{}
+func (p *parser) parseIdentifier() *ast.Identifier {
+	i := &ast.Identifier{}
 	i.AddIdent(p.next().Val)
 	for {
 		succ, toks := p.accept(token.DOT, token.IDENTIFIER)

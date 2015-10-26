@@ -87,7 +87,7 @@ func (u usePackage) String() string {
 type Class struct {
 	Name       string
 	typeParams []string
-	withs      []Identifier
+	withs      []*Identifier
 	statements []Statement
 }
 
@@ -118,7 +118,7 @@ func (c *Class) AddTypeParam(t string) {
 	c.typeParams = append(c.typeParams, t)
 }
 
-func (c *Class) AddWith(i Identifier) {
+func (c *Class) AddWith(i *Identifier) {
 	c.withs = append(c.withs, i)
 }
 
@@ -130,10 +130,76 @@ type Identifier struct {
 	idents []string
 }
 
-func (i Identifier) String() string {
+func (i Identifier) isStmt() {}
+
+func (i *Identifier) Print(indent int) {
+	fmt.Print(i)
+}
+
+func (i *Identifier) String() string {
 	return strings.Join(i.idents, ".")
 }
 
 func (i *Identifier) AddIdent(ident string) {
 	i.idents = append(i.idents, ident)
+}
+
+type TypeRedirect struct {
+	Type Statement
+	Name string
+}
+
+func (t *TypeRedirect) isStmt() {}
+
+func (t *TypeRedirect) Print(indent int) {
+	printIndent(indent)
+	fmt.Printf("%v as %v\n", t.Type, t.Name)
+}
+
+type AnonFuncType struct {
+	params  []Statement
+	returns []Statement
+}
+
+func (a *AnonFuncType) isExpr() {}
+func (a *AnonFuncType) isStmt() {}
+
+func (a *AnonFuncType) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(a)
+}
+
+func (a *AnonFuncType) String() string {
+	ret := "func("
+	for i, p := range a.params {
+		if i > 0 {
+			ret += ", "
+		}
+		ret += fmt.Sprint(p)
+	}
+	ret += ")"
+	if len(a.returns) > 0 {
+		ret += " "
+		if len(a.returns) > 1 {
+			ret += "("
+		}
+		for i, r := range a.returns {
+			if i > 0 {
+				ret += ", "
+			}
+			ret += fmt.Sprint(r)
+		}
+		if len(a.returns) > 1 {
+			ret += ")"
+		}
+	}
+	return ret
+}
+
+func (a *AnonFuncType) AddParam(p Statement) {
+	a.params = append(a.params, p)
+}
+
+func (a *AnonFuncType) AddReturn(r Statement) {
+	a.returns = append(a.returns, r)
 }

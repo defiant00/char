@@ -1,12 +1,19 @@
-use
-	"fmt"
+int as myThing
+test.Thing as anotherThing
 
-myClass<T, T2> with first, second.thing
-	FIRST = iota
-	SECOND
+func() as anon1
+func() int as anon2
+func() (int) as anon3
+func() (int, class.Mine) as anon4
 
-	iota
-	ANOTHER = iota
-	SECOND2
+func(int) as anon5
+func(int) int as anon6
+func(int) (int) as anon7
+func(int) (int, class.Mine) as anon8
 
-	greeting = "hello from char"
+func(int, class.Mine) as anon9
+func(int, class.Mine) int as anon10
+func(int, class.Mine) (int) as anon11
+func(int, class.Mine) (int, class.Mine) as anon12
+
+func(int, func(int, bool) int) (stuff.Other, func() func(int, bool) bool) as anon13
