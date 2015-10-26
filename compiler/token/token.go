@@ -12,6 +12,10 @@ func (t Type) IsKeyword() bool {
 	return t > keyword_start && t < keyword_end
 }
 
+func (t Type) IsType() bool {
+	return t == IDENTIFIER || t == FUNCTION
+}
+
 const (
 	ERROR         Type = iota // an error, val contains the error text
 	INDENT                    // an increase in indentation
@@ -29,6 +33,7 @@ const (
 	WITH                      // 'with'
 	FUNCTION                  // 'func'
 	VAR                       // 'var'
+	IOTA                      // 'iota'
 	DOT                       // '.'
 	COMMA                     // ','
 	LEFTPAREN                 // '('
@@ -36,6 +41,11 @@ const (
 	LEFTCARET                 // '<'
 	RIGHTCARET                // '>'
 	ASSIGN                    // '='
+	ADD                       // '+'
+	SUBTRACT                  // '-'
+	MULTIPLY                  // '*'
+	DIVIDE                    // '/'
+	MOD                       // '%'
 	keyword_end               //
 )
 
@@ -55,6 +65,7 @@ var tStrings = map[Type]string{
 	WITH:       "With",
 	FUNCTION:   "Func",
 	VAR:        "Var",
+	IOTA:       "Iota",
 	DOT:        ".",
 	COMMA:      ",",
 	LEFTPAREN:  "(",
@@ -62,6 +73,11 @@ var tStrings = map[Type]string{
 	LEFTCARET:  "<",
 	RIGHTCARET: ">",
 	ASSIGN:     "=",
+	ADD:        "+",
+	SUBTRACT:   "-",
+	MULTIPLY:   "*",
+	DIVIDE:     "/",
+	MOD:        "%",
 }
 
 var Keywords = map[string]Type{
@@ -70,6 +86,7 @@ var Keywords = map[string]Type{
 	"with": WITH,
 	"func": FUNCTION,
 	"var":  VAR,
+	"iota": IOTA,
 	".":    DOT,
 	",":    COMMA,
 	"(":    LEFTPAREN,
@@ -77,6 +94,11 @@ var Keywords = map[string]Type{
 	"<":    LEFTCARET,
 	">":    RIGHTCARET,
 	"=":    ASSIGN,
+	"+":    ADD,
+	"-":    SUBTRACT,
+	"*":    MULTIPLY,
+	"/":    DIVIDE,
+	"%":    MOD,
 }
 
 type Token struct {

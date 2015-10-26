@@ -203,3 +203,29 @@ func (a *AnonFuncType) AddParam(p Statement) {
 func (a *AnonFuncType) AddReturn(r Statement) {
 	a.returns = append(a.returns, r)
 }
+
+type Iota struct{}
+
+func (i *Iota) isStmt() {}
+
+func (i *Iota) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("iota reset")
+}
+
+type Property struct {
+	Static bool
+	Name   string
+	Type   Statement
+}
+
+func (p *Property) isStmt() {}
+
+func (p *Property) Print(indent int) {
+	printIndent(indent)
+	if p.Static {
+		fmt.Print("static ")
+	}
+	fmt.Print(p.Name)
+	fmt.Println(p.Type)
+}

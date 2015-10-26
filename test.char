@@ -1,19 +1,15 @@
-int as myThing
-test.Thing as anotherThing
-
-func() as anon1
-func() int as anon2
-func() (int) as anon3
-func() (int, class.Mine) as anon4
-
-func(int) as anon5
-func(int) int as anon6
-func(int) (int) as anon7
-func(int) (int, class.Mine) as anon8
-
-func(int, class.Mine) as anon9
-func(int, class.Mine) int as anon10
-func(int, class.Mine) (int) as anon11
-func(int, class.Mine) (int, class.Mine) as anon12
-
-func(int, func(int, bool) int) (stuff.Other, func() func(int, bool) bool) as anon13
+myClass<T, T2> with test, t2.thing
+	Greeting              = "Hello from Char!"
+	Greeting2 string      = "Hello"
+	Greeting3 base.String = "hello"
+	
+;	First = iota
+;	Second
+	
+	iota
+;	First2 int8 = iota
+;	Second2
+	
+	iota
+;	First3 my.Thing = iota + 2
+;	Second3

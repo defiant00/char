@@ -135,8 +135,8 @@ func (p *parser) parseFile() ast.General {
 
 func (p *parser) parseTopLevelIdent() ast.Statement {
 	p.next() // eat identifier
-	t := p.next()
-	p.backup(2)
+	t := p.peek()
+	p.backup(1)
 	if t.Type == token.DOT || t.Type == token.AS {
 		return p.parseTypeRedirect()
 	}
@@ -187,10 +187,10 @@ func (p *parser) parseAnonFuncType() ast.Statement {
 	p.next() // eat )
 
 	// return value(s)
-	switch p.peek().Type {
-	case token.IDENTIFIER, token.FUNCTION:
+	switch t := p.peek().Type; {
+	case t.IsType():
 		a.AddReturn(p.parseType())
-	case token.LEFTPAREN:
+	case t == token.LEFTPAREN:
 		p.next() // eat (
 		for p.peek().Type != token.RIGHTPAREN {
 			a.AddReturn(p.parseType())
@@ -250,12 +250,68 @@ func (p *parser) parseClass() ast.Statement {
 		}
 	}
 
-	succ, toks = p.accept(token.EOL)
+	succ, toks = p.accept(token.EOL, token.INDENT)
 	if !succ {
 		return p.errorStmt(true, "Unknown token in class %v declaration: %v", c.Name, toks[len(toks)-1])
 	}
 
+	for p.peek().Type != token.DEDENT {
+		c.AddStmt(p.parseClassStmt())
+	}
+
+	succ, toks = p.accept(token.DEDENT)
+	if !succ {
+		c.AddStmt(p.errorStmt(true, "Unknown token in class %v declaration: %v", c.Name, toks[len(toks)-1]))
+	}
+
 	return c
+}
+
+func (p *parser) parseClassStmt() ast.Statement {
+	switch p.peek().Type {
+	case token.DOT:
+		return p.parseClassStmtIdent(true)
+	case token.IDENTIFIER:
+		return p.parseClassStmtIdent(false)
+	case token.IOTA:
+		return p.parseIota()
+	}
+	return p.errorStmt(true, "Unknown token in class statement: %v", p.peek())
+}
+
+func (p *parser) parseClassStmtIdent(dotted bool) ast.Statement {
+	if dotted {
+		p.next() // eat .
+	}
+	succ, toks := p.accept(token.IDENTIFIER)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
+	}
+
+	name := toks[0].Val
+	if p.peek().Type == token.LEFTPAREN {
+		return p.errorStmt(true, "Function parsing not yet implemented!")
+	}
+
+	var typ ast.Statement
+	if p.peek().Type.IsType() {
+		typ = p.parseType()
+	}
+
+	succ, toks = p.accept(token.EOL)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
+	}
+
+	return &ast.Property{Static: !dotted, Name: name, Type: typ}
+}
+
+func (p *parser) parseIota() ast.Statement {
+	succ, toks := p.accept(token.IOTA, token.EOL)
+	if succ {
+		return &ast.Iota{}
+	}
+	return p.errorStmt(true, "Unknown token in iota reset: %v", toks[len(toks)-1])
 }
 
 func (p *parser) parseIdentifier() *ast.Identifier {
