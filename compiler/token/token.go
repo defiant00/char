@@ -26,9 +26,14 @@ const (
 	keyword_start             //
 	USE                       // 'use'
 	AS                        // 'as'
+	WITH                      // 'with'
 	VAR                       // 'var'
+	DOT                       // '.'
+	COMMA                     // ','
 	LEFTPAREN                 // '('
 	RIGHTPAREN                // ')'
+	LEFTCARET                 // '<'
+	RIGHTCARET                // '>'
 	ASSIGN                    // '='
 	keyword_end               //
 )
@@ -46,19 +51,29 @@ var tStrings = map[Type]string{
 	IDENTIFIER: "Identifier",
 	USE:        "Use",
 	AS:         "As",
+	WITH:       "With",
 	VAR:        "Var",
+	DOT:        ".",
+	COMMA:      ",",
 	LEFTPAREN:  "(",
 	RIGHTPAREN: ")",
+	LEFTCARET:  "<",
+	RIGHTCARET: ">",
 	ASSIGN:     "=",
 }
 
 var Keywords = map[string]Type{
-	"use": USE,
-	"as":  AS,
-	"var": VAR,
-	"(":   LEFTPAREN,
-	")":   RIGHTPAREN,
-	"=":   ASSIGN,
+	"use":  USE,
+	"as":   AS,
+	"with": WITH,
+	"var":  VAR,
+	".":    DOT,
+	",":    COMMA,
+	"(":    LEFTPAREN,
+	")":    RIGHTPAREN,
+	"<":    LEFTCARET,
+	">":    RIGHTCARET,
+	"=":    ASSIGN,
 }
 
 type Token struct {

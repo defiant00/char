@@ -15,7 +15,7 @@ type parser struct {
 	fmtTokens []token.Token // all tokens, used to format
 }
 
-func Parse(file string, printTokens bool) ast.General {
+func Parse(file string, build, format, printTokens bool) ast.General {
 	fmt.Println("Parsing file", file)
 
 	dat, err := ioutil.ReadFile(file)
@@ -37,8 +37,10 @@ func Parse(file string, printTokens bool) ast.General {
 	// Read all tokens into a slice.
 	for {
 		t = l.NextToken()
-		p.fmtTokens = append(p.fmtTokens, t)
-		if t.Type != token.SLCOMMENT {
+		if format {
+			p.fmtTokens = append(p.fmtTokens, t)
+		}
+		if build && t.Type != token.SLCOMMENT {
 			p.tokens = append(p.tokens, t)
 		}
 		if printTokens {
@@ -114,6 +116,8 @@ func (p *parser) parseFile() ast.General {
 		switch p.peek().Type {
 		case token.EOF:
 			p.next()
+		case token.IDENTIFIER:
+			f.AddStmt(p.parseClass())
 		case token.USE:
 			f.AddStmt(p.parseUse())
 		default:
@@ -121,6 +125,69 @@ func (p *parser) parseFile() ast.General {
 		}
 	}
 	return f
+}
+
+func (p *parser) parseClass() ast.Statement {
+	c := &ast.Class{Name: p.next().Val}
+
+	succ, toks := p.accept(token.LEFTCARET)
+	if succ {
+		succ, toks = p.accept(token.IDENTIFIER)
+		if !succ {
+			return p.errorStmt(true, "Unknown token in class %v type declaration: %v", c.Name, toks[len(toks)-1])
+		}
+		c.AddTypeParam(toks[0].Val)
+		for {
+			succ, toks = p.accept(token.COMMA, token.IDENTIFIER)
+			if !succ {
+				break
+			}
+			c.AddTypeParam(toks[1].Val)
+		}
+		succ, toks = p.accept(token.RIGHTCARET)
+		if !succ {
+			return p.errorStmt(true, "Unknown token in class %v type declaration: %v", c.Name, toks[len(toks)-1])
+		}
+	}
+
+	succ, toks = p.accept(token.WITH)
+	if succ {
+		if p.peek().Type != token.IDENTIFIER {
+			return p.errorStmt(true, "Unknown token in class %v with declaration: %v", c.Name, p.peek())
+		}
+		c.AddWith(p.parseIdentifier())
+
+		for {
+			succ, toks = p.accept(token.COMMA)
+			if !succ {
+				break
+			}
+			if p.peek().Type != token.IDENTIFIER {
+				return p.errorStmt(true, "Unknown token in class %v with declaration: %v", c.Name, p.peek())
+			}
+			c.AddWith(p.parseIdentifier())
+		}
+	}
+
+	succ, toks = p.accept(token.EOL)
+	if !succ {
+		return p.errorStmt(true, "Unknown token in class %v declaration: %v", c.Name, toks[len(toks)-1])
+	}
+
+	return c
+}
+
+func (p *parser) parseIdentifier() ast.Identifier {
+	i := ast.Identifier{}
+	i.AddIdent(p.next().Val)
+	for {
+		succ, toks := p.accept(token.DOT, token.IDENTIFIER)
+		if !succ {
+			break
+		}
+		i.AddIdent(toks[1].Val)
+	}
+	return i
 }
 
 func (p *parser) parseUse() ast.Statement {

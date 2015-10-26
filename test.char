@@ -1,7 +1,12 @@
 use
 	"fmt"
-	"io" as i
-	"test" t
-	"test2" as t2
-use
-	"fmt"
+
+myClass<T, T2> with first, second.thing
+	FIRST = iota
+	SECOND
+
+	iota
+	ANOTHER = iota
+	SECOND2
+
+	greeting = "hello from char"

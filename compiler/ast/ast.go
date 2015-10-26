@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 )
 
 type General interface {
@@ -81,4 +82,58 @@ func (u usePackage) String() string {
 		return fmt.Sprintf("%v as %v", u.pack, u.alias)
 	}
 	return u.pack
+}
+
+type Class struct {
+	Name       string
+	typeParams []string
+	withs      []Identifier
+	statements []Statement
+}
+
+func (c *Class) isStmt() {}
+
+func (c *Class) Print(indent int) {
+	printIndent(indent)
+	fmt.Print("class ", c.Name)
+	if len(c.typeParams) > 0 {
+		fmt.Print("<", strings.Join(c.typeParams, ", "), ">")
+	}
+	if len(c.withs) > 0 {
+		fmt.Print(" with ")
+		for i, w := range c.withs {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(w)
+		}
+	}
+	fmt.Println()
+	for _, s := range c.statements {
+		s.Print(indent + 1)
+	}
+}
+
+func (c *Class) AddTypeParam(t string) {
+	c.typeParams = append(c.typeParams, t)
+}
+
+func (c *Class) AddWith(i Identifier) {
+	c.withs = append(c.withs, i)
+}
+
+func (c *Class) AddStmt(s Statement) {
+	c.statements = append(c.statements, s)
+}
+
+type Identifier struct {
+	idents []string
+}
+
+func (i Identifier) String() string {
+	return strings.Join(i.idents, ".")
+}
+
+func (i *Identifier) AddIdent(ident string) {
+	i.idents = append(i.idents, ident)
 }
