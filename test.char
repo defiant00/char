@@ -1,15 +1,2 @@
-myClass<T, T2> with test, t2.thing
-	Greeting              = "Hello from Char!"
-	Greeting2 string      = "Hello"
-	Greeting3 base.String = "hello"
-	
-	First = iota
-	Second
-	
-	iota
-;	First2 int8 = iota
-;	Second2
-	
-	iota
-;	First3 my.Thing = iota + 2
-;	Second3
+myClass
+	.b = true or false

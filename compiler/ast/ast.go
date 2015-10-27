@@ -205,11 +205,11 @@ func (a *AnonFuncType) AddReturn(r Statement) {
 	a.returns = append(a.returns, r)
 }
 
-type Iota struct{}
+type IotaStmt struct{}
 
-func (i *Iota) isStmt() {}
+func (i *IotaStmt) isStmt() {}
 
-func (i *Iota) Print(indent int) {
+func (i *IotaStmt) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("iota reset")
 }
@@ -261,4 +261,46 @@ func (s *StringExpr) isExpr() {}
 func (s *StringExpr) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("string", s.Val)
+}
+
+type NumberExpr struct {
+	Val string
+}
+
+func (n *NumberExpr) isExpr() {}
+
+func (n *NumberExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("number", n.Val)
+}
+
+type CharExpr struct {
+	Val string
+}
+
+func (c *CharExpr) isExpr() {}
+
+func (c *CharExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("char", c.Val)
+}
+
+type BoolExpr struct {
+	Val bool
+}
+
+func (b *BoolExpr) isExpr() {}
+
+func (b *BoolExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("bool", b.Val)
+}
+
+type IotaExpr struct{}
+
+func (i *IotaExpr) isExpr() {}
+
+func (i *IotaExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("iota")
 }

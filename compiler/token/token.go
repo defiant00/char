@@ -36,6 +36,8 @@ const (
 	IOTA                      // 'iota'
 	TRUE                      // 'true'
 	FALSE                     // 'false'
+	AND                       // 'and'
+	OR                        // 'or'
 	DOT                       // '.'
 	COMMA                     // ','
 	LEFTPAREN                 // '('
@@ -70,6 +72,8 @@ var tStrings = map[Type]string{
 	IOTA:       "Iota",
 	TRUE:       "True",
 	FALSE:      "False",
+	AND:        "And",
+	OR:         "Or",
 	DOT:        ".",
 	COMMA:      ",",
 	LEFTPAREN:  "(",
@@ -93,6 +97,8 @@ var Keywords = map[string]Type{
 	"iota":  IOTA,
 	"true":  TRUE,
 	"false": FALSE,
+	"and":   AND,
+	"or":    OR,
 	".":     DOT,
 	",":     COMMA,
 	"(":     LEFTPAREN,
@@ -130,6 +136,8 @@ func (t Token) Precedence() int {
 		return 10
 	case MULTIPLY, DIVIDE, MOD:
 		return 20
+	case AND, OR:
+		return 30
 	case DOT:
 		return 100
 	}

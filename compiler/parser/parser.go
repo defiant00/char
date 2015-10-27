@@ -255,7 +255,7 @@ func (p *parser) parseClass() ast.Statement {
 		return p.errorStmt(true, "Unknown token in class %v declaration: %v", c.Name, toks[len(toks)-1])
 	}
 
-	for p.peek().Type != token.DEDENT {
+	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
 		c.AddStmt(p.parseClassStmt())
 	}
 
@@ -274,7 +274,7 @@ func (p *parser) parseClassStmt() ast.Statement {
 	case token.IDENTIFIER:
 		return p.parseClassStmtIdent(false)
 	case token.IOTA:
-		return p.parseIota()
+		return p.parseIotaStmt()
 	}
 	return p.errorStmt(true, "Unknown token in class statement: %v", p.peek())
 }
@@ -314,18 +314,40 @@ func (p *parser) parseClassStmtIdent(dotted bool) ast.Statement {
 
 func (p *parser) parsePrimaryExpr() ast.Expression {
 	switch p.peek().Type {
-	case token.LEFTPAREN:
-		//return p.parseParenExpr()
-	case token.IDENTIFIER:
-		//return p.parseIdentExpr()
+	//case token.LEFTPAREN:
+	//return p.parseParenExpr()
+	//case token.IDENTIFIER:
+	//return p.parseIdentExpr()
+	case token.IOTA:
+		return p.parseIotaExpr()
 	case token.STRING:
 		return p.parseStringExpr()
 	case token.NUMBER:
-		//return p.parseNumberExpr()
+		return p.parseNumberExpr()
+	case token.CHAR:
+		return p.parseCharExpr()
 	case token.TRUE, token.FALSE:
-		//return p.parseBoolExpr()
+		return p.parseBoolExpr()
 	}
 	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
+}
+
+func (p *parser) parseBoolExpr() ast.Expression {
+	t := p.next()
+	return &ast.BoolExpr{Val: t.Type == token.TRUE}
+}
+
+func (p *parser) parseCharExpr() ast.Expression {
+	return &ast.CharExpr{Val: p.next().Val}
+}
+
+func (p *parser) parseNumberExpr() ast.Expression {
+	return &ast.NumberExpr{Val: p.next().Val}
+}
+
+func (p *parser) parseIotaExpr() ast.Expression {
+	p.next()
+	return &ast.IotaExpr{}
 }
 
 func (p *parser) parseStringExpr() ast.Expression {
@@ -376,10 +398,10 @@ func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression 
 	}
 }
 
-func (p *parser) parseIota() ast.Statement {
+func (p *parser) parseIotaStmt() ast.Statement {
 	succ, toks := p.accept(token.IOTA, token.EOL)
 	if succ {
-		return &ast.Iota{}
+		return &ast.IotaStmt{}
 	}
 	return p.errorStmt(true, "Unknown token in iota reset: %v", toks[len(toks)-1])
 }
