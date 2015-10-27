@@ -34,6 +34,8 @@ const (
 	FUNCTION                  // 'func'
 	VAR                       // 'var'
 	IOTA                      // 'iota'
+	TRUE                      // 'true'
+	FALSE                     // 'false'
 	DOT                       // '.'
 	COMMA                     // ','
 	LEFTPAREN                 // '('
@@ -59,13 +61,15 @@ var tStrings = map[Type]string{
 	STRING:     "String",
 	CHAR:       "Character",
 	NUMBER:     "Number",
-	IDENTIFIER: "Identifier",
+	IDENTIFIER: "Id",
 	USE:        "Use",
 	AS:         "As",
 	WITH:       "With",
 	FUNCTION:   "Func",
 	VAR:        "Var",
 	IOTA:       "Iota",
+	TRUE:       "True",
+	FALSE:      "False",
 	DOT:        ".",
 	COMMA:      ",",
 	LEFTPAREN:  "(",
@@ -81,24 +85,26 @@ var tStrings = map[Type]string{
 }
 
 var Keywords = map[string]Type{
-	"use":  USE,
-	"as":   AS,
-	"with": WITH,
-	"func": FUNCTION,
-	"var":  VAR,
-	"iota": IOTA,
-	".":    DOT,
-	",":    COMMA,
-	"(":    LEFTPAREN,
-	")":    RIGHTPAREN,
-	"<":    LEFTCARET,
-	">":    RIGHTCARET,
-	"=":    ASSIGN,
-	"+":    ADD,
-	"-":    SUBTRACT,
-	"*":    MULTIPLY,
-	"/":    DIVIDE,
-	"%":    MOD,
+	"use":   USE,
+	"as":    AS,
+	"with":  WITH,
+	"func":  FUNCTION,
+	"var":   VAR,
+	"iota":  IOTA,
+	"true":  TRUE,
+	"false": FALSE,
+	".":     DOT,
+	",":     COMMA,
+	"(":     LEFTPAREN,
+	")":     RIGHTPAREN,
+	"<":     LEFTCARET,
+	">":     RIGHTCARET,
+	"=":     ASSIGN,
+	"+":     ADD,
+	"-":     SUBTRACT,
+	"*":     MULTIPLY,
+	"/":     DIVIDE,
+	"%":     MOD,
 }
 
 type Token struct {
@@ -116,6 +122,18 @@ func (t Token) String() string {
 	default:
 		return fmt.Sprintf("%v %v", t.Pos, t.Type)
 	}
+}
+
+func (t Token) Precedence() int {
+	switch t.Type {
+	case ADD, SUBTRACT:
+		return 10
+	case MULTIPLY, DIVIDE, MOD:
+		return 20
+	case DOT:
+		return 100
+	}
+	return -1
 }
 
 type Position struct {

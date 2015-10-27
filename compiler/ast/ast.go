@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+	"github.com/defiant00/char/compiler/token"
 	"strings"
 )
 
@@ -217,6 +218,7 @@ type Property struct {
 	Static bool
 	Name   string
 	Type   Statement
+	Val    Expression
 }
 
 func (p *Property) isStmt() {}
@@ -227,5 +229,36 @@ func (p *Property) Print(indent int) {
 		fmt.Print("static ")
 	}
 	fmt.Print(p.Name)
-	fmt.Println(p.Type)
+	if p.Type != nil {
+		fmt.Print(" ", p.Type)
+	}
+	fmt.Println()
+	if p.Val != nil {
+		p.Val.Print(indent + 1)
+	}
+}
+
+type BinaryExpr struct {
+	Left, Right Expression
+	Op          token.Type
+}
+
+func (b *BinaryExpr) isExpr() {}
+
+func (b *BinaryExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(b.Op)
+	b.Left.Print(indent + 1)
+	b.Right.Print(indent + 1)
+}
+
+type StringExpr struct {
+	Val string
+}
+
+func (s *StringExpr) isExpr() {}
+
+func (s *StringExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("string", s.Val)
 }

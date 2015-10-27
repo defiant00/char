@@ -146,6 +146,7 @@ func lexIndent(l *Lexer) stateFn {
 			l.emit(token.EOF)
 			return nil
 		case '\r', '\n':
+			indent = 0
 			l.discard()
 		case ' ':
 			indent++

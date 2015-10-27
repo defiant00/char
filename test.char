@@ -3,8 +3,8 @@ myClass<T, T2> with test, t2.thing
 	Greeting2 string      = "Hello"
 	Greeting3 base.String = "hello"
 	
-;	First = iota
-;	Second
+	First = iota
+	Second
 	
 	iota
 ;	First2 int8 = iota

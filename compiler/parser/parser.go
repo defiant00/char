@@ -298,12 +298,82 @@ func (p *parser) parseClassStmtIdent(dotted bool) ast.Statement {
 		typ = p.parseType()
 	}
 
+	var val ast.Expression
+	if p.peek().Type == token.ASSIGN {
+		p.next() // eat =
+		val = p.parseExpr()
+	}
+
 	succ, toks = p.accept(token.EOL)
 	if !succ {
 		return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
 	}
 
-	return &ast.Property{Static: !dotted, Name: name, Type: typ}
+	return &ast.Property{Static: !dotted, Name: name, Type: typ, Val: val}
+}
+
+func (p *parser) parsePrimaryExpr() ast.Expression {
+	switch p.peek().Type {
+	case token.LEFTPAREN:
+		//return p.parseParenExpr()
+	case token.IDENTIFIER:
+		//return p.parseIdentExpr()
+	case token.STRING:
+		return p.parseStringExpr()
+	case token.NUMBER:
+		//return p.parseNumberExpr()
+	case token.TRUE, token.FALSE:
+		//return p.parseBoolExpr()
+	}
+	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
+}
+
+func (p *parser) parseStringExpr() ast.Expression {
+	return &ast.StringExpr{Val: p.next().Val}
+}
+
+func (p *parser) parseExpr() ast.Expression {
+	lhs := p.parsePrimaryExpr()
+	switch lhs.(type) {
+	case *ast.Error:
+		return lhs
+	}
+
+	return p.parseBinopRHS(0, lhs)
+}
+
+func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression {
+	for {
+		tokPrec := p.peek().Precedence()
+
+		// If this is a binary operator that binds as tightly as the
+		// current one, consume it. Otherwise we're done.
+		if tokPrec < exprPrec {
+			return lhs
+		}
+
+		op := p.next()
+
+		rhs := p.parsePrimaryExpr()
+		switch rhs.(type) {
+		case *ast.Error:
+			return rhs // An error, so rhs should hold the error message
+		}
+
+		// If binop binds less tightly with RHS than the operator after RHS,
+		// let the pending op take RHS as its LHS.
+		nextPrec := p.peek().Precedence()
+		if tokPrec < nextPrec {
+			rhs = p.parseBinopRHS(tokPrec+1, rhs)
+			switch rhs.(type) {
+			case *ast.Error:
+				return rhs // An error, so rhs should hold the error message
+			}
+		}
+
+		// Merge lhs/rhs
+		lhs = &ast.BinaryExpr{Op: op.Type, Left: lhs, Right: rhs}
+	}
 }
 
 func (p *parser) parseIota() ast.Statement {
