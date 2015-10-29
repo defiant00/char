@@ -88,7 +88,7 @@ func (u usePackage) String() string {
 type Class struct {
 	Name       string
 	typeParams []string
-	withs      []*Identifier
+	withs      []Statement
 	statements []Statement
 }
 
@@ -119,30 +119,48 @@ func (c *Class) AddTypeParam(t string) {
 	c.typeParams = append(c.typeParams, t)
 }
 
-func (c *Class) AddWith(i *Identifier) {
-	c.withs = append(c.withs, i)
+func (c *Class) AddWith(s Statement) {
+	c.withs = append(c.withs, s)
 }
 
 func (c *Class) AddStmt(s Statement) {
 	c.statements = append(c.statements, s)
 }
 
-type Identifier struct {
-	idents []string
+type TypeIdent struct {
+	idents     []string
+	typeParams []Statement
 }
 
-func (i Identifier) isStmt() {}
+func (t TypeIdent) isStmt() {}
 
-func (i *Identifier) Print(indent int) {
-	fmt.Print(i)
+func (t *TypeIdent) Print(indent int) {
+	fmt.Print("TypeIdentifier ", t)
 }
 
-func (i *Identifier) String() string {
-	return strings.Join(i.idents, ".")
+func (t *TypeIdent) String() string {
+	ret := strings.Join(t.idents, ".")
+	if len(t.typeParams) > 0 {
+		ret += "<"
+	}
+	for i, tp := range t.typeParams {
+		if i > 0 {
+			ret += ", "
+		}
+		ret += fmt.Sprint(tp)
+	}
+	if len(t.typeParams) > 0 {
+		ret += ">"
+	}
+	return ret
 }
 
-func (i *Identifier) AddIdent(ident string) {
-	i.idents = append(i.idents, ident)
+func (t *TypeIdent) AddIdent(ident string) {
+	t.idents = append(t.idents, ident)
+}
+
+func (t *TypeIdent) AddTypeParam(s Statement) {
+	t.typeParams = append(t.typeParams, s)
 }
 
 type TypeRedirect struct {

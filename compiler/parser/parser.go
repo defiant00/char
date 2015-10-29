@@ -134,13 +134,27 @@ func (p *parser) parseFile() ast.General {
 }
 
 func (p *parser) parseTopLevelIdent() ast.Statement {
-	p.next() // eat identifier
-	t := p.peek()
-	p.backup(1)
-	if t.Type == token.DOT || t.Type == token.AS {
+	if p.isTypeRedirect() {
 		return p.parseTypeRedirect()
 	}
 	return p.parseClass()
+}
+
+// isTypeRedirect returns whether a line of tokens is a type redirect.
+// It reads through tokens until it encounters an EOL. During that time,
+// if it encounters an AS it returns true, otherwise false.
+func (p *parser) isTypeRedirect() bool {
+	count := 0
+	for p.peek().Type != token.EOL {
+		if p.peek().Type == token.AS {
+			p.backup(count)
+			return true
+		}
+		p.next()
+		count++
+	}
+	p.backup(count)
+	return false
 }
 
 func (p *parser) parseTypeRedirect() ast.Statement {
@@ -161,7 +175,7 @@ func (p *parser) parseTypeRedirect() ast.Statement {
 
 func (p *parser) parseType() ast.Statement {
 	if p.peek().Type == token.IDENTIFIER {
-		return p.parseIdentifier()
+		return p.parseTypeIdent()
 	}
 	return p.parseAnonFuncType()
 }
@@ -236,7 +250,7 @@ func (p *parser) parseClass() ast.Statement {
 		if p.peek().Type != token.IDENTIFIER {
 			return p.errorStmt(true, "Unknown token in class %v with declaration: %v", c.Name, p.peek())
 		}
-		c.AddWith(p.parseIdentifier())
+		c.AddWith(p.parseTypeIdent())
 
 		for {
 			succ, toks = p.accept(token.COMMA)
@@ -246,7 +260,7 @@ func (p *parser) parseClass() ast.Statement {
 			if p.peek().Type != token.IDENTIFIER {
 				return p.errorStmt(true, "Unknown token in class %v with declaration: %v", c.Name, p.peek())
 			}
-			c.AddWith(p.parseIdentifier())
+			c.AddWith(p.parseTypeIdent())
 		}
 	}
 
@@ -406,17 +420,30 @@ func (p *parser) parseIotaStmt() ast.Statement {
 	return p.errorStmt(true, "Unknown token in iota reset: %v", toks[len(toks)-1])
 }
 
-func (p *parser) parseIdentifier() *ast.Identifier {
-	i := &ast.Identifier{}
-	i.AddIdent(p.next().Val)
+func (p *parser) parseTypeIdent() ast.Statement {
+	t := &ast.TypeIdent{}
+	t.AddIdent(p.next().Val)
 	for {
 		succ, toks := p.accept(token.DOT, token.IDENTIFIER)
 		if !succ {
 			break
 		}
-		i.AddIdent(toks[1].Val)
+		t.AddIdent(toks[1].Val)
 	}
-	return i
+	succ, toks := p.accept(token.LEFTCARET)
+	if succ {
+		for p.peek().Type.IsType() {
+			t.AddTypeParam(p.parseType())
+			if succ, _ = p.accept(token.COMMA); !succ {
+				break
+			}
+		}
+		succ, toks = p.accept(token.RIGHTCARET)
+		if !succ {
+			return p.errorStmt(true, "Unknown token parsing type identifier: %v", toks[len(toks)-1])
+		}
+	}
+	return t
 }
 
 func (p *parser) parseUse() ast.Statement {
