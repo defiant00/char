@@ -283,47 +283,77 @@ func (p *parser) parseClass() ast.Statement {
 
 func (p *parser) parseClassStmt() ast.Statement {
 	switch p.peek().Type {
-	case token.DOT:
-		return p.parseClassStmtIdent(true)
-	case token.IDENTIFIER:
-		return p.parseClassStmtIdent(false)
+	case token.DOT, token.IDENTIFIER:
+		return p.parseClassStmtIdent()
 	case token.IOTA:
 		return p.parseIotaStmt()
 	}
 	return p.errorStmt(true, "Unknown token in class statement: %v", p.peek())
 }
 
-func (p *parser) parseClassStmtIdent(dotted bool) ast.Statement {
-	if dotted {
-		p.next() // eat .
+func (p *parser) parseClassStmtIdent() ast.Statement {
+	ps := &ast.PropertySet{}
+	var (
+		succ bool
+		toks []token.Token
+	)
+
+	for {
+		dotted, _ := p.accept(token.DOT)
+		succ, toks := p.accept(token.IDENTIFIER)
+		if !succ {
+			return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
+		}
+		name := toks[0].Val
+		var typ ast.Statement
+		if p.peek().Type.IsType() {
+			typ = p.parseType()
+		}
+		ps.AddProp(!dotted, name, typ)
+		if succ, _ = p.accept(token.COMMA); !succ {
+			break
+		}
 	}
-	succ, toks := p.accept(token.IDENTIFIER)
-	if !succ {
+
+	if succ, toks = p.accept(token.ASSIGN); succ {
+		for {
+			ps.AddVal(p.parseExpr())
+			if succ, _ = p.accept(token.COMMA); !succ {
+				break
+			}
+		}
+	}
+
+	if succ, toks = p.accept(token.EOL); !succ {
 		return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
 	}
 
-	name := toks[0].Val
-	if p.peek().Type == token.LEFTPAREN {
-		return p.errorStmt(true, "Function parsing not yet implemented!")
-	}
+	return ps
+	/*
 
-	var typ ast.Statement
-	if p.peek().Type.IsType() {
-		typ = p.parseType()
-	}
+		name := toks[0].Val
+		if p.peek().Type == token.LEFTPAREN {
+			return p.errorStmt(true, "Function parsing not yet implemented!")
+		}
 
-	var val ast.Expression
-	if p.peek().Type == token.ASSIGN {
-		p.next() // eat =
-		val = p.parseExpr()
-	}
+		var typ ast.Statement
+		if p.peek().Type.IsType() {
+			typ = p.parseType()
+		}
 
-	succ, toks = p.accept(token.EOL)
-	if !succ {
-		return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
-	}
+		var val ast.Expression
+		if p.peek().Type == token.ASSIGN {
+			p.next() // eat =
+			val = p.parseExpr()
+		}
 
-	return &ast.Property{Static: !dotted, Name: name, Type: typ, Val: val}
+		succ, toks = p.accept(token.EOL)
+		if !succ {
+			return p.errorStmt(true, "Unknown token in class statement: %v", toks[len(toks)-1])
+		}
+
+		return &ast.Property{Static: !dotted, Name: name, Type: typ, Val: val}
+	*/
 }
 
 func (p *parser) parsePrimaryExpr() ast.Expression {

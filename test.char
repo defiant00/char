@@ -1,10 +1,22 @@
-myClass<T> with first, second
-	thing = "hello"
+myClass
+	f
+	f, s
+	.f
+	.f, .s
+	
+	f int
+	f, s int.bob
+	f first, s second
+	.f first, .s second
+	
+	iota
 
-myClass<T> with test<my.Class>, my.Class<T>, my.Class<my.Class<T>, int>
-	thing = "dood"
-
-myClass<int> as intList
-
-myClass<T> with test<func(int) (T, T)>
-	thing = 3
+	f = 1
+	f, s = "two", "three"
+	.f = true
+	.f, .s = 3, 4
+	
+	f int = 1
+	f, s int.bob = 2, "two"
+	f first, s second = "three", true
+	.f first, .s second = true or false, "second"

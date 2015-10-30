@@ -132,7 +132,7 @@ type TypeIdent struct {
 	typeParams []Statement
 }
 
-func (t TypeIdent) isStmt() {}
+func (t *TypeIdent) isStmt() {}
 
 func (t *TypeIdent) Print(indent int) {
 	fmt.Print("TypeIdentifier ", t)
@@ -232,28 +232,55 @@ func (i *IotaStmt) Print(indent int) {
 	fmt.Println("iota reset")
 }
 
-type Property struct {
-	Static bool
-	Name   string
-	Type   Statement
-	Val    Expression
+type PropertySet struct {
+	props []property
+	vals  []Expression
 }
 
-func (p *Property) isStmt() {}
+func (p *PropertySet) isStmt() {}
 
-func (p *Property) Print(indent int) {
+func (p *PropertySet) Print(indent int) {
 	printIndent(indent)
-	if p.Static {
-		fmt.Print("static ")
+	fmt.Print("prop set ")
+	for i, pr := range p.props {
+		if i > 0 {
+			fmt.Print(", ")
+		}
+		fmt.Print(pr)
 	}
-	fmt.Print(p.Name)
-	if p.Type != nil {
-		fmt.Print(" ", p.Type)
+	if len(p.vals) > 0 {
+		fmt.Print(" =")
 	}
 	fmt.Println()
-	if p.Val != nil {
-		p.Val.Print(indent + 1)
+	for _, v := range p.vals {
+		v.Print(indent + 1)
 	}
+}
+
+func (p *PropertySet) AddProp(static bool, name string, typ Statement) {
+	p.props = append(p.props, property{static: static, name: name, typ: typ})
+}
+
+func (p *PropertySet) AddVal(v Expression) {
+	p.vals = append(p.vals, v)
+}
+
+type property struct {
+	static bool
+	name   string
+	typ    Statement
+}
+
+func (p property) String() string {
+	var ret string
+	if p.static {
+		ret = "static "
+	}
+	ret += p.name
+	if p.typ != nil {
+		ret += fmt.Sprintf(" %v", p.typ)
+	}
+	return ret
 }
 
 type BinaryExpr struct {
