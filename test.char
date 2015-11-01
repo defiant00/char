@@ -1,8 +1,8 @@
-myClass
-	num, greeting = 42, "Hello!"
-	
-	doGreeting()
-		test.thing(1 + 2, num, greet(hello), true or false)
-		test(1, 2)
-		var x = 5
-		x += 3
+mix loc
+	.X, .Y int
+	.Move(x, y int)
+		X, Y += x, y
+
+myClass with loc
+	.Print()
+		fmt.Print('(' + X + ", " + Y + ')')

@@ -96,6 +96,7 @@ func (u usePackage) String() string {
 }
 
 type Class struct {
+	Mixin      bool
 	Name       string
 	typeParams []string
 	withs      []Statement
@@ -106,6 +107,9 @@ func (c *Class) isStmt() {}
 
 func (c *Class) Print(indent int) {
 	printIndent(indent)
+	if c.Mixin {
+		fmt.Print("mixin ")
+	}
 	fmt.Print("class ", c.Name)
 	if len(c.typeParams) > 0 {
 		fmt.Print("<", strings.Join(c.typeParams, ", "), ">")
@@ -258,8 +262,8 @@ func (p *PropertySet) Print(indent int) {
 		}
 		fmt.Print(pr)
 	}
+	fmt.Println()
 	if p.Vals != nil {
-		fmt.Println()
 		p.Vals.Print(indent + 1)
 	}
 }
@@ -308,7 +312,7 @@ func (s *StringExpr) isExpr() {}
 
 func (s *StringExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Println("string", s.Val)
+	fmt.Printf("string '%v'\n", s.Val)
 }
 
 type NumberExpr struct {
@@ -330,7 +334,7 @@ func (c *CharExpr) isExpr() {}
 
 func (c *CharExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Println("char", c.Val)
+	fmt.Printf("char '%v'\n", c.Val)
 }
 
 type BoolExpr struct {
@@ -426,6 +430,7 @@ type FuncDefStmt struct {
 	Static     bool
 	Name       string
 	params     []param
+	returns    []Statement
 	statements []Statement
 }
 
@@ -444,7 +449,25 @@ func (f *FuncDefStmt) Print(indent int) {
 		}
 		fmt.Print(p)
 	}
-	fmt.Println(")")
+	fmt.Print(")")
+
+	if len(f.returns) > 0 {
+		fmt.Print(" ")
+		if len(f.returns) > 1 {
+			fmt.Print("(")
+		}
+		for i, r := range f.returns {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(r)
+		}
+		if len(f.returns) > 1 {
+			fmt.Print(")")
+		}
+	}
+
+	fmt.Println()
 	for _, s := range f.statements {
 		s.Print(indent + 1)
 	}
@@ -456,6 +479,10 @@ func (f *FuncDefStmt) AddStmt(s Statement) {
 
 func (f *FuncDefStmt) AddParam(name string, typ Statement) {
 	f.params = append(f.params, param{name: name, typ: typ})
+}
+
+func (f *FuncDefStmt) AddReturn(r Statement) {
+	f.returns = append(f.returns, r)
 }
 
 type param struct {
@@ -472,28 +499,45 @@ func (p param) String() string {
 }
 
 type VarSet struct {
-	vars []variable
-	Vals Expression
+	lines []*VarSetLine
 }
 
 func (v *VarSet) isStmt() {}
 
 func (v *VarSet) Print(indent int) {
 	printIndent(indent)
-	fmt.Print("var set: ")
+	fmt.Println("var set")
+	for _, l := range v.lines {
+		l.Print(indent + 1)
+	}
+}
+
+func (v *VarSet) AddLine(vsl *VarSetLine) {
+	v.lines = append(v.lines, vsl)
+}
+
+type VarSetLine struct {
+	vars []variable
+	Vals Expression
+}
+
+func (v *VarSetLine) isStmt() {}
+
+func (v *VarSetLine) Print(indent int) {
+	printIndent(indent)
 	for i, vr := range v.vars {
 		if i > 0 {
 			fmt.Print(", ")
 		}
 		fmt.Print(vr)
 	}
+	fmt.Println()
 	if v.Vals != nil {
-		fmt.Println()
 		v.Vals.Print(indent + 1)
 	}
 }
 
-func (v *VarSet) AddVar(name string, typ Statement) {
+func (v *VarSetLine) AddVar(name string, typ Statement) {
 	v.vars = append(v.vars, variable{name: name, typ: typ})
 }
 

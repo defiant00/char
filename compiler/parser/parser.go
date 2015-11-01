@@ -126,6 +126,8 @@ func (p *parser) parseFile() ast.General {
 			f.AddStmt(p.parseTypeRedirect())
 		case token.USE:
 			f.AddStmt(p.parseUse())
+		case token.MIXIN:
+			f.AddStmt(p.parseMixin())
 		default:
 			f.AddStmt(p.errorStmt(true, "Invalid token %v", p.peek()))
 		}
@@ -137,7 +139,7 @@ func (p *parser) parseTopLevelIdent() ast.Statement {
 	if p.isTypeRedirect() {
 		return p.parseTypeRedirect()
 	}
-	return p.parseClass()
+	return p.parseClass(false)
 }
 
 // isTypeRedirect returns whether a line of tokens is a type redirect.
@@ -155,6 +157,11 @@ func (p *parser) isTypeRedirect() bool {
 	}
 	p.backup(count)
 	return false
+}
+
+func (p *parser) parseMixin() ast.Statement {
+	p.next() // eat mix
+	return p.parseClass(true)
 }
 
 func (p *parser) parseTypeRedirect() ast.Statement {
@@ -199,29 +206,20 @@ func (p *parser) parseAnonFuncType() ast.Statement {
 	p.next() // eat )
 
 	// return value(s)
-	switch t := p.peek().Type; {
-	case t.IsType():
-		a.AddReturn(p.parseType())
-	case t == token.LEFTPAREN:
-		p.next() // eat (
-		for p.peek().Type != token.RIGHTPAREN {
-			a.AddReturn(p.parseType())
-			switch p.peek().Type {
-			case token.COMMA:
-				p.next() // eat ,
-			case token.RIGHTPAREN:
-			default:
-				return p.errorStmt(true, "Invalid token in anonymous function: %v", p.peek())
-			}
-		}
-		p.next() // eat )
+	rvs := p.parseReturnValues()
+	for _, rv := range rvs {
+		a.AddReturn(rv)
 	}
 
 	return a
 }
 
-func (p *parser) parseClass() ast.Statement {
-	c := &ast.Class{Name: p.next().Val}
+func (p *parser) parseClass(mixin bool) ast.Statement {
+	succ, toks := p.accept(token.IDENTIFIER)
+	if !succ {
+		return p.errorStmt(true, "Invalid token in class declaration: %v", toks[len(toks)-1])
+	}
+	c := &ast.Class{Mixin: mixin, Name: toks[0].Val}
 
 	if succ, _ := p.accept(token.LEFTCARET); succ {
 		succ, toks := p.accept(token.IDENTIFIER)
@@ -308,6 +306,33 @@ func (p *parser) parseFuncStmtVar() ast.Statement {
 	p.next() // eat var
 	vs := &ast.VarSet{}
 
+	vsl := p.parseFuncStmtVarLine()
+	switch vsl.(type) {
+	case *ast.Error:
+		return vsl
+	}
+	vs.AddLine(vsl.(*ast.VarSetLine))
+
+	if succ, _ := p.accept(token.INDENT); succ {
+		for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
+			vsl = p.parseFuncStmtVarLine()
+			switch vsl.(type) {
+			case *ast.Error:
+				return vsl
+			}
+			vs.AddLine(vsl.(*ast.VarSetLine))
+		}
+
+		if succ, toks := p.accept(token.DEDENT); !succ {
+			return p.errorStmt(true, "Invalid token in var statement: %v", toks[len(toks)-1])
+		}
+	}
+
+	return vs
+}
+
+func (p *parser) parseFuncStmtVarLine() ast.Statement {
+	v := &ast.VarSetLine{}
 	for {
 		succ, toks := p.accept(token.IDENTIFIER)
 		if !succ {
@@ -320,21 +345,20 @@ func (p *parser) parseFuncStmtVar() ast.Statement {
 			typ = p.parseType()
 		}
 
-		vs.AddVar(name, typ)
+		v.AddVar(name, typ)
 		if succ, _ = p.accept(token.COMMA); !succ {
 			break
 		}
 	}
 
 	if succ, _ := p.accept(token.ASSIGN); succ {
-		vs.Vals = p.parseExpr()
+		v.Vals = p.parseExpr()
 	}
 
 	if succ, toks := p.accept(token.EOL); !succ {
 		return p.errorStmt(true, "Invalid token in var statement: %v", toks[len(toks)-1])
 	}
-
-	return vs
+	return v
 }
 
 func (p *parser) parseClassStmtIdent() ast.Statement {
@@ -373,6 +397,30 @@ func (p *parser) parseClassStmtIdent() ast.Statement {
 	return ps
 }
 
+func (p *parser) parseReturnValues() []ast.Statement {
+	rvs := make([]ast.Statement, 0, 1)
+
+	switch t := p.peek().Type; {
+	case t.IsType():
+		rvs = append(rvs, p.parseType())
+	case t == token.LEFTPAREN:
+		p.next() // eat (
+		for p.peek().Type != token.RIGHTPAREN {
+			rvs = append(rvs, p.parseType())
+			switch p.peek().Type {
+			case token.COMMA:
+				p.next() // eat ,
+			case token.RIGHTPAREN:
+			default:
+				return append(rvs, p.errorStmt(true, "Invalid token in return types: %v", p.peek()))
+			}
+		}
+		p.next() // eat )
+	}
+
+	return rvs
+}
+
 // parseFunctionDef parses a function definition with the optional dot and name
 // already consumed.
 func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
@@ -384,7 +432,11 @@ func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
 			return p.errorStmt(true, "Invalid token in function %v definition: %v", name, p.peek())
 		}
 		name := toks[0].Val
-		f.AddParam(name, p.parseType())
+		var typ ast.Statement
+		if p.peek().Type.IsType() {
+			typ = p.parseType()
+		}
+		f.AddParam(name, typ)
 		switch p.peek().Type {
 		case token.COMMA:
 			p.next() // eat ,
@@ -393,7 +445,17 @@ func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
 			return p.errorStmt(true, "Invalid token in function %v definition: %v", name, p.peek())
 		}
 	}
-	if succ, toks := p.accept(token.RIGHTPAREN, token.EOL, token.INDENT); !succ {
+	if succ, toks := p.accept(token.RIGHTPAREN); !succ {
+		return p.errorStmt(true, "Invalid token in function %v definition: %v", name, toks[len(toks)-1])
+	}
+
+	// return value(s)
+	rvs := p.parseReturnValues()
+	for _, rv := range rvs {
+		f.AddReturn(rv)
+	}
+
+	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
 		return p.errorStmt(true, "Invalid token in function %v definition: %v", name, toks[len(toks)-1])
 	}
 
@@ -478,8 +540,7 @@ func (p *parser) parseIdentExpr() ast.Expression {
 }
 
 func (p *parser) parseBoolExpr() ast.Expression {
-	t := p.next()
-	return &ast.BoolExpr{Val: t.Type == token.TRUE}
+	return &ast.BoolExpr{Val: p.next().Type == token.TRUE}
 }
 
 func (p *parser) parseCharExpr() ast.Expression {
@@ -576,7 +637,14 @@ func (p *parser) parseTypeIdent() ast.Statement {
 func (p *parser) parseUse() ast.Statement {
 	p.next() // eat token.USE
 	u := &ast.Use{}
-	if succ, _ := p.accept(token.EOL, token.INDENT); succ {
+
+	err, pack, alias, errTok := p.parseUsePackage()
+	if err {
+		return p.errorStmt(true, "Invalid token found when parsing Use: %v", errTok)
+	}
+	u.AddPackage(pack, alias)
+
+	if succ, _ := p.accept(token.INDENT); succ {
 		err, pack, alias, errTok := p.parseUsePackage()
 		for !err {
 			u.AddPackage(pack, alias)
@@ -588,11 +656,6 @@ func (p *parser) parseUse() ast.Statement {
 		return p.errorStmt(true, "Invalid token found when parsing Use: %v", errTok)
 	}
 
-	err, pack, alias, errTok := p.parseUsePackage()
-	if err {
-		return p.errorStmt(true, "Invalid token found when parsing Use: %v", errTok)
-	}
-	u.AddPackage(pack, alias)
 	return u
 }
 
