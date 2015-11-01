@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Char Compiler v0.2 Pre-Alpha")
+	fmt.Println("Char Compiler v0.1")
 	var build, format, printTokens, printAST bool
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: char <path> [parameters]")

@@ -1,22 +1,8 @@
 myClass
-	f
-	f, s
-	.f
-	.f, .s
+	num, greeting = 42, "Hello!"
 	
-	f int
-	f, s int.bob
-	f first, s second
-	.f first, .s second
-	
-	iota
-
-	f = 1
-	f, s = "two", "three"
-	.f = true
-	.f, .s = 3, 4
-	
-	f int = 1
-	f, s int.bob = 2, "two"
-	f first, s second = "three", true
-	.f first, .s second = true or false, "second"
+	doGreeting()
+		test.thing(1 + 2, num, greet(hello), true or false)
+		test(1, 2)
+		var x = 5
+		x += 3

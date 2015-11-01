@@ -155,7 +155,7 @@ func lexIndent(l *Lexer) stateFn {
 		case ';':
 			l.backup()
 			l.discard()
-			return lexSLComment
+			return lexComment
 		default:
 			l.backup()
 			l.discard()
@@ -185,7 +185,7 @@ func lexStatement(l *Lexer) stateFn {
 			}
 			return lexIndent
 		case r == ';':
-			return lexSLComment
+			return lexComment
 		case r == '"':
 			l.inStmt = true
 			return lexString
@@ -207,14 +207,14 @@ func lexStatement(l *Lexer) stateFn {
 	}
 }
 
-func lexSLComment(l *Lexer) stateFn {
+func lexComment(l *Lexer) stateFn {
 	l.next() // Eat the ;
 	l.discard()
 	for r := l.peek(); r != eof && r != '\r' && r != '\n'; {
 		l.next()
 		r = l.peek()
 	}
-	l.emit(token.SLCOMMENT)
+	l.emit(token.COMMENT)
 	return lexStatement
 }
 

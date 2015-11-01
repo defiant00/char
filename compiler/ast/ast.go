@@ -38,6 +38,16 @@ func (e *Error) Print(indent int) {
 	fmt.Printf("ERROR: %v\n", e.Val)
 }
 
+type ExprStmt struct {
+	Expr Expression
+}
+
+func (e *ExprStmt) isStmt() {}
+
+func (e *ExprStmt) Print(indent int) {
+	e.Expr.Print(indent)
+}
+
 type File struct {
 	Name       string
 	statements []Statement
@@ -234,35 +244,28 @@ func (i *IotaStmt) Print(indent int) {
 
 type PropertySet struct {
 	props []property
-	vals  []Expression
+	Vals  Expression
 }
 
 func (p *PropertySet) isStmt() {}
 
 func (p *PropertySet) Print(indent int) {
 	printIndent(indent)
-	fmt.Print("prop set ")
+	fmt.Print("prop set: ")
 	for i, pr := range p.props {
 		if i > 0 {
 			fmt.Print(", ")
 		}
 		fmt.Print(pr)
 	}
-	if len(p.vals) > 0 {
-		fmt.Print(" =")
-	}
-	fmt.Println()
-	for _, v := range p.vals {
-		v.Print(indent + 1)
+	if p.Vals != nil {
+		fmt.Println()
+		p.Vals.Print(indent + 1)
 	}
 }
 
 func (p *PropertySet) AddProp(static bool, name string, typ Statement) {
 	p.props = append(p.props, property{static: static, name: name, typ: typ})
-}
-
-func (p *PropertySet) AddVal(v Expression) {
-	p.vals = append(p.vals, v)
 }
 
 type property struct {
@@ -348,4 +351,161 @@ func (i *IotaExpr) isExpr() {}
 func (i *IotaExpr) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("iota")
+}
+
+type IdentExpr struct {
+	Idents []*IdentPart
+}
+
+func (i *IdentExpr) isExpr() {}
+
+func (ie *IdentExpr) Print(indent int) {
+	printIndent(indent)
+	for i, id := range ie.Idents {
+		if i > 0 {
+			fmt.Print(".")
+		}
+		fmt.Print(id)
+	}
+	fmt.Println()
+}
+
+type FuncCallExpr struct {
+	Idents []*IdentPart
+	Params Expression
+}
+
+func (f *FuncCallExpr) isExpr() {}
+
+func (f *FuncCallExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Print("func ")
+	for i, id := range f.Idents {
+		if i > 0 {
+			fmt.Print(".")
+		}
+		fmt.Print(id)
+	}
+	fmt.Println()
+	if f.Params != nil {
+		f.Params.Print(indent + 1)
+	}
+}
+
+type IdentPart struct {
+	Name       string
+	typeParams []Statement
+}
+
+func (ip *IdentPart) String() string {
+	ret := ip.Name
+	if len(ip.typeParams) > 0 {
+		ret += "<"
+	}
+	for i, tp := range ip.typeParams {
+		if i > 0 {
+			ret += ", "
+		}
+		ret += fmt.Sprint(tp)
+	}
+	if len(ip.typeParams) > 0 {
+		ret += ">"
+	}
+	return ret
+}
+
+func (i *IdentPart) AddTypeParam(s Statement) {
+	i.typeParams = append(i.typeParams, s)
+}
+
+func (i *IdentPart) ResetTypeParams() {
+	i.typeParams = make([]Statement, 0)
+}
+
+type FuncDefStmt struct {
+	Static     bool
+	Name       string
+	params     []param
+	statements []Statement
+}
+
+func (f *FuncDefStmt) isStmt() {}
+
+func (f *FuncDefStmt) Print(indent int) {
+	printIndent(indent)
+	if f.Static {
+		fmt.Print("static ")
+	}
+	fmt.Print(f.Name)
+	fmt.Print("(")
+	for i, p := range f.params {
+		if i > 0 {
+			fmt.Print(", ")
+		}
+		fmt.Print(p)
+	}
+	fmt.Println(")")
+	for _, s := range f.statements {
+		s.Print(indent + 1)
+	}
+}
+
+func (f *FuncDefStmt) AddStmt(s Statement) {
+	f.statements = append(f.statements, s)
+}
+
+func (f *FuncDefStmt) AddParam(name string, typ Statement) {
+	f.params = append(f.params, param{name: name, typ: typ})
+}
+
+type param struct {
+	name string
+	typ  Statement
+}
+
+func (p param) String() string {
+	ret := p.name
+	if p.typ != nil {
+		ret += fmt.Sprint(" ", p.typ)
+	}
+	return ret
+}
+
+type VarSet struct {
+	vars []variable
+	Vals Expression
+}
+
+func (v *VarSet) isStmt() {}
+
+func (v *VarSet) Print(indent int) {
+	printIndent(indent)
+	fmt.Print("var set: ")
+	for i, vr := range v.vars {
+		if i > 0 {
+			fmt.Print(", ")
+		}
+		fmt.Print(vr)
+	}
+	if v.Vals != nil {
+		fmt.Println()
+		v.Vals.Print(indent + 1)
+	}
+}
+
+func (v *VarSet) AddVar(name string, typ Statement) {
+	v.vars = append(v.vars, variable{name: name, typ: typ})
+}
+
+type variable struct {
+	name string
+	typ  Statement
+}
+
+func (v variable) String() string {
+	ret := v.name
+	if v.typ != nil {
+		ret += fmt.Sprint(" ", v.typ)
+	}
+	return ret
 }

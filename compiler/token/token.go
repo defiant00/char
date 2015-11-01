@@ -22,7 +22,7 @@ const (
 	DEDENT                    // a decrease in indentation
 	EOL                       // the end of a line of code
 	EOF                       // the end of the file
-	SLCOMMENT                 // single-line comment
+	COMMENT                   // comment
 	STRING                    // a literal string
 	CHAR                      // a literal character
 	NUMBER                    // a literal number
@@ -45,35 +45,40 @@ const (
 	LEFTCARET                 // '<'
 	RIGHTCARET                // '>'
 	ASSIGN                    // '='
+	ADDASSIGN                 // '+='
+	SUBASSIGN                 // '-='
+	MULASSIGN                 // '*='
+	DIVASSIGN                 // '/='
+	MODASSIGN                 // '%='
 	ADD                       // '+'
-	SUBTRACT                  // '-'
-	MULTIPLY                  // '*'
-	DIVIDE                    // '/'
+	SUB                       // '-'
+	MUL                       // '*'
+	DIV                       // '/'
 	MOD                       // '%'
 	keyword_end               //
 )
 
 var tStrings = map[Type]string{
-	ERROR:      "Error",
-	INDENT:     "Indent",
-	DEDENT:     "Dedent",
+	ERROR:      "error",
+	INDENT:     "indent",
+	DEDENT:     "dedent",
 	EOL:        "EOL",
 	EOF:        "EOF",
-	SLCOMMENT:  "SLComment",
-	STRING:     "String",
-	CHAR:       "Character",
-	NUMBER:     "Number",
-	IDENTIFIER: "Id",
-	USE:        "Use",
-	AS:         "As",
-	WITH:       "With",
-	FUNCTION:   "Func",
-	VAR:        "Var",
-	IOTA:       "Iota",
-	TRUE:       "True",
-	FALSE:      "False",
-	AND:        "And",
-	OR:         "Or",
+	COMMENT:    "comment",
+	STRING:     "string",
+	CHAR:       "char",
+	NUMBER:     "number",
+	IDENTIFIER: "id",
+	USE:        "use",
+	AS:         "as",
+	WITH:       "with",
+	FUNCTION:   "func",
+	VAR:        "var",
+	IOTA:       "iota",
+	TRUE:       "true",
+	FALSE:      "false",
+	AND:        "and",
+	OR:         "or",
 	DOT:        ".",
 	COMMA:      ",",
 	LEFTPAREN:  "(",
@@ -81,10 +86,15 @@ var tStrings = map[Type]string{
 	LEFTCARET:  "<",
 	RIGHTCARET: ">",
 	ASSIGN:     "=",
+	ADDASSIGN:  "+=",
+	SUBASSIGN:  "-=",
+	MULASSIGN:  "*=",
+	DIVASSIGN:  "/=",
+	MODASSIGN:  "%=",
 	ADD:        "+",
-	SUBTRACT:   "-",
-	MULTIPLY:   "*",
-	DIVIDE:     "/",
+	SUB:        "-",
+	MUL:        "*",
+	DIV:        "/",
 	MOD:        "%",
 }
 
@@ -106,10 +116,15 @@ var Keywords = map[string]Type{
 	"<":     LEFTCARET,
 	">":     RIGHTCARET,
 	"=":     ASSIGN,
+	"+=":    ADDASSIGN,
+	"-=":    SUBASSIGN,
+	"*=":    MULASSIGN,
+	"/=":    DIVASSIGN,
+	"%=":    MODASSIGN,
 	"+":     ADD,
-	"-":     SUBTRACT,
-	"*":     MULTIPLY,
-	"/":     DIVIDE,
+	"-":     SUB,
+	"*":     MUL,
+	"/":     DIV,
 	"%":     MOD,
 }
 
@@ -123,7 +138,7 @@ func (t Token) String() string {
 	switch t.Type {
 	case EOL:
 		return fmt.Sprintf("%v %v\n", t.Pos, t.Type)
-	case SLCOMMENT, STRING, CHAR, NUMBER, IDENTIFIER, ERROR:
+	case COMMENT, STRING, CHAR, NUMBER, IDENTIFIER, ERROR:
 		return fmt.Sprintf("%v %v : '%v'", t.Pos, t.Type, t.Val)
 	default:
 		return fmt.Sprintf("%v %v", t.Pos, t.Type)
@@ -132,14 +147,20 @@ func (t Token) String() string {
 
 func (t Token) Precedence() int {
 	switch t.Type {
-	case ADD, SUBTRACT:
-		return 10
-	case MULTIPLY, DIVIDE, MOD:
-		return 20
+	case ASSIGN, ADDASSIGN, SUBASSIGN, MULASSIGN, DIVASSIGN, MODASSIGN:
+		return 1
+	case COMMA:
+		return 2
+	case ADD, SUB:
+		return 3
+	case MUL, DIV, MOD:
+		return 4
 	case AND, OR:
-		return 30
+		return 5
+	case LEFTCARET, RIGHTCARET:
+		return 6
 	case DOT:
-		return 100
+		return 10
 	}
 	return -1
 }
