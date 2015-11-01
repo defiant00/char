@@ -31,7 +31,7 @@ const (
 	USE                       // 'use'
 	AS                        // 'as'
 	WITH                      // 'with'
-	FUNCTION                  // 'func'
+	FUNCTION                  // 'fn'
 	MIXIN                     // 'mix'
 	VAR                       // 'var'
 	IOTA                      // 'iota'
@@ -73,7 +73,7 @@ var tStrings = map[Type]string{
 	USE:        "use",
 	AS:         "as",
 	WITH:       "with",
-	FUNCTION:   "func",
+	FUNCTION:   "fn",
 	MIXIN:      "mix",
 	VAR:        "var",
 	IOTA:       "iota",
@@ -104,7 +104,7 @@ var Keywords = map[string]Type{
 	"use":   USE,
 	"as":    AS,
 	"with":  WITH,
-	"func":  FUNCTION,
+	"fn":    FUNCTION,
 	"mix":   MIXIN,
 	"var":   VAR,
 	"iota":  IOTA,

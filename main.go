@@ -1,3 +1,18 @@
+/*
+TODO
+
+Parsing:
+	return
+	as
+	is
+	if
+	if/is
+	for
+	loop
+	interface
+
+*/
+
 package main
 
 import (

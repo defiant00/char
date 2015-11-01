@@ -30,22 +30,22 @@ type Error struct {
 	Val string
 }
 
-func (e *Error) isStmt() {}
-func (e *Error) isExpr() {}
+func (this *Error) isStmt() {}
+func (this *Error) isExpr() {}
 
-func (e *Error) Print(indent int) {
+func (this *Error) Print(indent int) {
 	printIndent(indent)
-	fmt.Printf("ERROR: %v\n", e.Val)
+	fmt.Printf("ERROR: %v\n", this.Val)
 }
 
 type ExprStmt struct {
 	Expr Expression
 }
 
-func (e *ExprStmt) isStmt() {}
+func (this *ExprStmt) isStmt() {}
 
-func (e *ExprStmt) Print(indent int) {
-	e.Expr.Print(indent)
+func (this *ExprStmt) Print(indent int) {
+	this.Expr.Print(indent)
 }
 
 type File struct {
@@ -53,46 +53,46 @@ type File struct {
 	statements []Statement
 }
 
-func (f *File) Print(indent int) {
+func (this *File) Print(indent int) {
 	printIndent(indent)
-	fmt.Println(f.Name)
-	for _, s := range f.statements {
+	fmt.Println(this.Name)
+	for _, s := range this.statements {
 		s.Print(indent + 1)
 	}
 }
 
-func (f *File) AddStmt(stmt Statement) {
-	f.statements = append(f.statements, stmt)
+func (this *File) AddStmt(stmt Statement) {
+	this.statements = append(this.statements, stmt)
 }
 
 type Use struct {
 	packages []usePackage
 }
 
-func (u *Use) isStmt() {}
+func (this *Use) isStmt() {}
 
-func (u *Use) Print(indent int) {
+func (this *Use) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("use")
-	for _, p := range u.packages {
+	for _, p := range this.packages {
 		printIndent(indent + 1)
 		fmt.Println(p)
 	}
 }
 
-func (u *Use) AddPackage(pack, alias string) {
-	u.packages = append(u.packages, usePackage{pack, alias})
+func (this *Use) AddPackage(pack, alias string) {
+	this.packages = append(this.packages, usePackage{pack, alias})
 }
 
 type usePackage struct {
 	pack, alias string
 }
 
-func (u usePackage) String() string {
-	if u.alias != "" {
-		return fmt.Sprintf("%v as %v", u.pack, u.alias)
+func (this usePackage) String() string {
+	if this.alias != "" {
+		return fmt.Sprintf("%v as %v", this.pack, this.alias)
 	}
-	return u.pack
+	return this.pack
 }
 
 type Class struct {
@@ -103,20 +103,20 @@ type Class struct {
 	statements []Statement
 }
 
-func (c *Class) isStmt() {}
+func (this *Class) isStmt() {}
 
-func (c *Class) Print(indent int) {
+func (this *Class) Print(indent int) {
 	printIndent(indent)
-	if c.Mixin {
+	if this.Mixin {
 		fmt.Print("mixin ")
 	}
-	fmt.Print("class ", c.Name)
-	if len(c.typeParams) > 0 {
-		fmt.Print("<", strings.Join(c.typeParams, ", "), ">")
+	fmt.Print("class ", this.Name)
+	if len(this.typeParams) > 0 {
+		fmt.Print("<", strings.Join(this.typeParams, ", "), ">")
 	}
-	if len(c.withs) > 0 {
+	if len(this.withs) > 0 {
 		fmt.Print(" with ")
-		for i, w := range c.withs {
+		for i, w := range this.withs {
 			if i > 0 {
 				fmt.Print(", ")
 			}
@@ -124,21 +124,21 @@ func (c *Class) Print(indent int) {
 		}
 	}
 	fmt.Println()
-	for _, s := range c.statements {
+	for _, s := range this.statements {
 		s.Print(indent + 1)
 	}
 }
 
-func (c *Class) AddTypeParam(t string) {
-	c.typeParams = append(c.typeParams, t)
+func (this *Class) AddTypeParam(t string) {
+	this.typeParams = append(this.typeParams, t)
 }
 
-func (c *Class) AddWith(s Statement) {
-	c.withs = append(c.withs, s)
+func (this *Class) AddWith(s Statement) {
+	this.withs = append(this.withs, s)
 }
 
-func (c *Class) AddStmt(s Statement) {
-	c.statements = append(c.statements, s)
+func (this *Class) AddStmt(s Statement) {
+	this.statements = append(this.statements, s)
 }
 
 type TypeIdent struct {
@@ -146,35 +146,35 @@ type TypeIdent struct {
 	typeParams []Statement
 }
 
-func (t *TypeIdent) isStmt() {}
+func (this *TypeIdent) isStmt() {}
 
-func (t *TypeIdent) Print(indent int) {
-	fmt.Print("TypeIdentifier ", t)
+func (this *TypeIdent) Print(indent int) {
+	fmt.Print("TypeIdentifier ", this)
 }
 
-func (t *TypeIdent) String() string {
-	ret := strings.Join(t.idents, ".")
-	if len(t.typeParams) > 0 {
+func (this *TypeIdent) String() string {
+	ret := strings.Join(this.idents, ".")
+	if len(this.typeParams) > 0 {
 		ret += "<"
 	}
-	for i, tp := range t.typeParams {
+	for i, t := range this.typeParams {
 		if i > 0 {
 			ret += ", "
 		}
-		ret += fmt.Sprint(tp)
+		ret += fmt.Sprint(t)
 	}
-	if len(t.typeParams) > 0 {
+	if len(this.typeParams) > 0 {
 		ret += ">"
 	}
 	return ret
 }
 
-func (t *TypeIdent) AddIdent(ident string) {
-	t.idents = append(t.idents, ident)
+func (this *TypeIdent) AddIdent(ident string) {
+	this.idents = append(this.idents, ident)
 }
 
-func (t *TypeIdent) AddTypeParam(s Statement) {
-	t.typeParams = append(t.typeParams, s)
+func (this *TypeIdent) AddTypeParam(s Statement) {
+	this.typeParams = append(this.typeParams, s)
 }
 
 type TypeRedirect struct {
@@ -182,66 +182,66 @@ type TypeRedirect struct {
 	Name string
 }
 
-func (t *TypeRedirect) isStmt() {}
+func (this *TypeRedirect) isStmt() {}
 
-func (t *TypeRedirect) Print(indent int) {
+func (this *TypeRedirect) Print(indent int) {
 	printIndent(indent)
-	fmt.Printf("%v as %v\n", t.Type, t.Name)
+	fmt.Printf("%v as %v\n", this.Type, this.Name)
 }
 
-type AnonFuncType struct {
+type FuncSigType struct {
 	params  []Statement
 	returns []Statement
 }
 
-func (a *AnonFuncType) isExpr() {}
-func (a *AnonFuncType) isStmt() {}
+func (this *FuncSigType) isExpr() {}
+func (this *FuncSigType) isStmt() {}
 
-func (a *AnonFuncType) Print(indent int) {
+func (this *FuncSigType) Print(indent int) {
 	printIndent(indent)
-	fmt.Println(a)
+	fmt.Println(this)
 }
 
-func (a *AnonFuncType) String() string {
-	ret := "func("
-	for i, p := range a.params {
+func (this *FuncSigType) String() string {
+	ret := "fn("
+	for i, p := range this.params {
 		if i > 0 {
 			ret += ", "
 		}
 		ret += fmt.Sprint(p)
 	}
 	ret += ")"
-	if len(a.returns) > 0 {
+	if len(this.returns) > 0 {
 		ret += " "
-		if len(a.returns) > 1 {
+		if len(this.returns) > 1 {
 			ret += "("
 		}
-		for i, r := range a.returns {
+		for i, r := range this.returns {
 			if i > 0 {
 				ret += ", "
 			}
 			ret += fmt.Sprint(r)
 		}
-		if len(a.returns) > 1 {
+		if len(this.returns) > 1 {
 			ret += ")"
 		}
 	}
 	return ret
 }
 
-func (a *AnonFuncType) AddParam(p Statement) {
-	a.params = append(a.params, p)
+func (this *FuncSigType) AddParam(p Statement) {
+	this.params = append(this.params, p)
 }
 
-func (a *AnonFuncType) AddReturn(r Statement) {
-	a.returns = append(a.returns, r)
+func (this *FuncSigType) AddReturn(r Statement) {
+	this.returns = append(this.returns, r)
 }
 
 type IotaStmt struct{}
 
-func (i *IotaStmt) isStmt() {}
+func (this *IotaStmt) isStmt() {}
 
-func (i *IotaStmt) Print(indent int) {
+func (this *IotaStmt) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("iota reset")
 }
@@ -251,25 +251,25 @@ type PropertySet struct {
 	Vals  Expression
 }
 
-func (p *PropertySet) isStmt() {}
+func (this *PropertySet) isStmt() {}
 
-func (p *PropertySet) Print(indent int) {
+func (this *PropertySet) Print(indent int) {
 	printIndent(indent)
 	fmt.Print("prop set: ")
-	for i, pr := range p.props {
+	for i, p := range this.props {
 		if i > 0 {
 			fmt.Print(", ")
 		}
-		fmt.Print(pr)
+		fmt.Print(p)
 	}
 	fmt.Println()
-	if p.Vals != nil {
-		p.Vals.Print(indent + 1)
+	if this.Vals != nil {
+		this.Vals.Print(indent + 1)
 	}
 }
 
-func (p *PropertySet) AddProp(static bool, name string, typ Statement) {
-	p.props = append(p.props, property{static: static, name: name, typ: typ})
+func (this *PropertySet) AddProp(static bool, name string, typ Statement) {
+	this.props = append(this.props, property{static: static, name: name, typ: typ})
 }
 
 type property struct {
@@ -278,14 +278,14 @@ type property struct {
 	typ    Statement
 }
 
-func (p property) String() string {
+func (this property) String() string {
 	var ret string
-	if p.static {
+	if this.static {
 		ret = "static "
 	}
-	ret += p.name
-	if p.typ != nil {
-		ret += fmt.Sprintf(" %v", p.typ)
+	ret += this.name
+	if this.typ != nil {
+		ret += fmt.Sprintf(" %v", this.typ)
 	}
 	return ret
 }
@@ -295,64 +295,64 @@ type BinaryExpr struct {
 	Op          token.Type
 }
 
-func (b *BinaryExpr) isExpr() {}
+func (this *BinaryExpr) isExpr() {}
 
-func (b *BinaryExpr) Print(indent int) {
+func (this *BinaryExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Println(b.Op)
-	b.Left.Print(indent + 1)
-	b.Right.Print(indent + 1)
+	fmt.Println(this.Op)
+	this.Left.Print(indent + 1)
+	this.Right.Print(indent + 1)
 }
 
 type StringExpr struct {
 	Val string
 }
 
-func (s *StringExpr) isExpr() {}
+func (this *StringExpr) isExpr() {}
 
-func (s *StringExpr) Print(indent int) {
+func (this *StringExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Printf("string '%v'\n", s.Val)
+	fmt.Printf("string '%v'\n", this.Val)
 }
 
 type NumberExpr struct {
 	Val string
 }
 
-func (n *NumberExpr) isExpr() {}
+func (this *NumberExpr) isExpr() {}
 
-func (n *NumberExpr) Print(indent int) {
+func (this *NumberExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Println("number", n.Val)
+	fmt.Println("number", this.Val)
 }
 
 type CharExpr struct {
 	Val string
 }
 
-func (c *CharExpr) isExpr() {}
+func (this *CharExpr) isExpr() {}
 
-func (c *CharExpr) Print(indent int) {
+func (this *CharExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Printf("char '%v'\n", c.Val)
+	fmt.Printf("char '%v'\n", this.Val)
 }
 
 type BoolExpr struct {
 	Val bool
 }
 
-func (b *BoolExpr) isExpr() {}
+func (this *BoolExpr) isExpr() {}
 
-func (b *BoolExpr) Print(indent int) {
+func (this *BoolExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Println("bool", b.Val)
+	fmt.Println("bool", this.Val)
 }
 
 type IotaExpr struct{}
 
-func (i *IotaExpr) isExpr() {}
+func (this *IotaExpr) isExpr() {}
 
-func (i *IotaExpr) Print(indent int) {
+func (this *IotaExpr) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("iota")
 }
@@ -361,11 +361,11 @@ type IdentExpr struct {
 	Idents []*IdentPart
 }
 
-func (i *IdentExpr) isExpr() {}
+func (this *IdentExpr) isExpr() {}
 
-func (ie *IdentExpr) Print(indent int) {
+func (this *IdentExpr) Print(indent int) {
 	printIndent(indent)
-	for i, id := range ie.Idents {
+	for i, id := range this.Idents {
 		if i > 0 {
 			fmt.Print(".")
 		}
@@ -379,20 +379,20 @@ type FuncCallExpr struct {
 	Params Expression
 }
 
-func (f *FuncCallExpr) isExpr() {}
+func (this *FuncCallExpr) isExpr() {}
 
-func (f *FuncCallExpr) Print(indent int) {
+func (this *FuncCallExpr) Print(indent int) {
 	printIndent(indent)
 	fmt.Print("func ")
-	for i, id := range f.Idents {
+	for i, id := range this.Idents {
 		if i > 0 {
 			fmt.Print(".")
 		}
 		fmt.Print(id)
 	}
 	fmt.Println()
-	if f.Params != nil {
-		f.Params.Print(indent + 1)
+	if this.Params != nil {
+		this.Params.Print(indent + 1)
 	}
 }
 
@@ -401,29 +401,29 @@ type IdentPart struct {
 	typeParams []Statement
 }
 
-func (ip *IdentPart) String() string {
-	ret := ip.Name
-	if len(ip.typeParams) > 0 {
+func (this *IdentPart) String() string {
+	ret := this.Name
+	if len(this.typeParams) > 0 {
 		ret += "<"
 	}
-	for i, tp := range ip.typeParams {
+	for i, tp := range this.typeParams {
 		if i > 0 {
 			ret += ", "
 		}
 		ret += fmt.Sprint(tp)
 	}
-	if len(ip.typeParams) > 0 {
+	if len(this.typeParams) > 0 {
 		ret += ">"
 	}
 	return ret
 }
 
-func (i *IdentPart) AddTypeParam(s Statement) {
-	i.typeParams = append(i.typeParams, s)
+func (this *IdentPart) AddTypeParam(s Statement) {
+	this.typeParams = append(this.typeParams, s)
 }
 
-func (i *IdentPart) ResetTypeParams() {
-	i.typeParams = make([]Statement, 0)
+func (this *IdentPart) ResetTypeParams() {
+	this.typeParams = make([]Statement, 0)
 }
 
 type FuncDefStmt struct {
@@ -434,16 +434,16 @@ type FuncDefStmt struct {
 	statements []Statement
 }
 
-func (f *FuncDefStmt) isStmt() {}
+func (this *FuncDefStmt) isStmt() {}
 
-func (f *FuncDefStmt) Print(indent int) {
+func (this *FuncDefStmt) Print(indent int) {
 	printIndent(indent)
-	if f.Static {
+	if this.Static {
 		fmt.Print("static ")
 	}
-	fmt.Print(f.Name)
+	fmt.Print(this.Name)
 	fmt.Print("(")
-	for i, p := range f.params {
+	for i, p := range this.params {
 		if i > 0 {
 			fmt.Print(", ")
 		}
@@ -451,38 +451,38 @@ func (f *FuncDefStmt) Print(indent int) {
 	}
 	fmt.Print(")")
 
-	if len(f.returns) > 0 {
+	if len(this.returns) > 0 {
 		fmt.Print(" ")
-		if len(f.returns) > 1 {
+		if len(this.returns) > 1 {
 			fmt.Print("(")
 		}
-		for i, r := range f.returns {
+		for i, r := range this.returns {
 			if i > 0 {
 				fmt.Print(", ")
 			}
 			fmt.Print(r)
 		}
-		if len(f.returns) > 1 {
+		if len(this.returns) > 1 {
 			fmt.Print(")")
 		}
 	}
 
 	fmt.Println()
-	for _, s := range f.statements {
+	for _, s := range this.statements {
 		s.Print(indent + 1)
 	}
 }
 
-func (f *FuncDefStmt) AddStmt(s Statement) {
-	f.statements = append(f.statements, s)
+func (this *FuncDefStmt) AddStmt(s Statement) {
+	this.statements = append(this.statements, s)
 }
 
-func (f *FuncDefStmt) AddParam(name string, typ Statement) {
-	f.params = append(f.params, param{name: name, typ: typ})
+func (this *FuncDefStmt) AddParam(name string, typ Statement) {
+	this.params = append(this.params, param{name: name, typ: typ})
 }
 
-func (f *FuncDefStmt) AddReturn(r Statement) {
-	f.returns = append(f.returns, r)
+func (this *FuncDefStmt) AddReturn(r Statement) {
+	this.returns = append(this.returns, r)
 }
 
 type param struct {
@@ -490,10 +490,10 @@ type param struct {
 	typ  Statement
 }
 
-func (p param) String() string {
-	ret := p.name
-	if p.typ != nil {
-		ret += fmt.Sprint(" ", p.typ)
+func (this param) String() string {
+	ret := this.name
+	if this.typ != nil {
+		ret += fmt.Sprint(" ", this.typ)
 	}
 	return ret
 }
@@ -502,18 +502,18 @@ type VarSet struct {
 	lines []*VarSetLine
 }
 
-func (v *VarSet) isStmt() {}
+func (this *VarSet) isStmt() {}
 
-func (v *VarSet) Print(indent int) {
+func (this *VarSet) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("var set")
-	for _, l := range v.lines {
+	for _, l := range this.lines {
 		l.Print(indent + 1)
 	}
 }
 
-func (v *VarSet) AddLine(vsl *VarSetLine) {
-	v.lines = append(v.lines, vsl)
+func (this *VarSet) AddLine(vsl *VarSetLine) {
+	this.lines = append(this.lines, vsl)
 }
 
 type VarSetLine struct {
@@ -521,24 +521,24 @@ type VarSetLine struct {
 	Vals Expression
 }
 
-func (v *VarSetLine) isStmt() {}
+func (this *VarSetLine) isStmt() {}
 
-func (v *VarSetLine) Print(indent int) {
+func (this *VarSetLine) Print(indent int) {
 	printIndent(indent)
-	for i, vr := range v.vars {
+	for i, v := range this.vars {
 		if i > 0 {
 			fmt.Print(", ")
 		}
-		fmt.Print(vr)
+		fmt.Print(v)
 	}
 	fmt.Println()
-	if v.Vals != nil {
-		v.Vals.Print(indent + 1)
+	if this.Vals != nil {
+		this.Vals.Print(indent + 1)
 	}
 }
 
-func (v *VarSetLine) AddVar(name string, typ Statement) {
-	v.vars = append(v.vars, variable{name: name, typ: typ})
+func (this *VarSetLine) AddVar(name string, typ Statement) {
+	this.vars = append(this.vars, variable{name: name, typ: typ})
 }
 
 type variable struct {
@@ -546,10 +546,10 @@ type variable struct {
 	typ  Statement
 }
 
-func (v variable) String() string {
-	ret := v.name
-	if v.typ != nil {
-		ret += fmt.Sprint(" ", v.typ)
+func (this variable) String() string {
+	ret := this.name
+	if this.typ != nil {
+		ret += fmt.Sprint(" ", this.typ)
 	}
 	return ret
 }

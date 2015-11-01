@@ -187,14 +187,14 @@ func (p *parser) parseType() ast.Statement {
 }
 
 func (p *parser) parseAnonFuncType() ast.Statement {
-	a := &ast.AnonFuncType{}
+	f := &ast.FuncSigType{}
 
 	// func(types)
 	if succ, toks := p.accept(token.FUNCTION, token.LEFTPAREN); !succ {
 		return p.errorStmt(true, "Invalid token in anonymous function: %v", toks[len(toks)-1])
 	}
 	for p.peek().Type != token.RIGHTPAREN {
-		a.AddParam(p.parseType())
+		f.AddParam(p.parseType())
 		switch p.peek().Type {
 		case token.COMMA:
 			p.next() // eat ,
@@ -208,10 +208,10 @@ func (p *parser) parseAnonFuncType() ast.Statement {
 	// return value(s)
 	rvs := p.parseReturnValues()
 	for _, rv := range rvs {
-		a.AddReturn(rv)
+		f.AddReturn(rv)
 	}
 
-	return a
+	return f
 }
 
 func (p *parser) parseClass(mixin bool) ast.Statement {
