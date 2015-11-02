@@ -89,6 +89,7 @@ func (l *Lexer) emitIndent(indent int) {
 	} else {
 		for l.indentLevels.Len() > 0 && indent < i {
 			l.emit(token.DEDENT)
+			l.emit(token.EOL)
 			l.indentLevels.Pop()
 			i = l.indentLevels.Peek()
 		}

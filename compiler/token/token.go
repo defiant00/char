@@ -16,6 +16,10 @@ func (t Type) IsType() bool {
 	return t == IDENTIFIER || t == FUNCTION
 }
 
+func (t Type) IsInBlock() bool {
+	return t == COMMA || t == RIGHTPAREN
+}
+
 const (
 	ERROR         Type = iota // an error, val contains the error text
 	INDENT                    // an increase in indentation
@@ -30,13 +34,19 @@ const (
 	keyword_start             //
 	USE                       // 'use'
 	AS                        // 'as'
+	IS                        // 'is'
 	WITH                      // 'with'
 	FUNCTION                  // 'fn'
 	MIXIN                     // 'mix'
 	VAR                       // 'var'
+	BLANK                     // '_'
+	RETURN                    // 'ret'
+	DEFER                     // 'defer'
 	IOTA                      // 'iota'
 	TRUE                      // 'true'
 	FALSE                     // 'false'
+	EQUALS                    // '=='
+	NOTEQUALS                 // '!='
 	AND                       // 'and'
 	OR                        // 'or'
 	DOT                       // '.'
@@ -72,13 +82,19 @@ var tStrings = map[Type]string{
 	IDENTIFIER: "id",
 	USE:        "use",
 	AS:         "as",
+	IS:         "is",
 	WITH:       "with",
 	FUNCTION:   "fn",
 	MIXIN:      "mix",
 	VAR:        "var",
+	BLANK:      "_",
+	RETURN:     "ret",
+	DEFER:      "defer",
 	IOTA:       "iota",
 	TRUE:       "true",
 	FALSE:      "false",
+	EQUALS:     "==",
+	NOTEQUALS:  "!=",
 	AND:        "and",
 	OR:         "or",
 	DOT:        ".",
@@ -103,13 +119,19 @@ var tStrings = map[Type]string{
 var Keywords = map[string]Type{
 	"use":   USE,
 	"as":    AS,
+	"is":    IS,
 	"with":  WITH,
 	"fn":    FUNCTION,
 	"mix":   MIXIN,
 	"var":   VAR,
+	"_":     BLANK,
+	"ret":   RETURN,
+	"defer": DEFER,
 	"iota":  IOTA,
 	"true":  TRUE,
 	"false": FALSE,
+	"==":    EQUALS,
+	"!=":    NOTEQUALS,
 	"and":   AND,
 	"or":    OR,
 	".":     DOT,
@@ -158,10 +180,14 @@ func (t Token) Precedence() int {
 		return 3
 	case MUL, DIV, MOD:
 		return 4
-	case AND, OR:
+	case EQUALS, NOTEQUALS:
 		return 5
-	case LEFTCARET, RIGHTCARET:
+	case AND, OR, IS:
 		return 6
+	case LEFTCARET, RIGHTCARET:
+		return 7
+	case AS:
+		return 8
 	case DOT:
 		return 10
 	}

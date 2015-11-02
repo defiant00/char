@@ -357,6 +357,15 @@ func (this *IotaExpr) Print(indent int) {
 	fmt.Println("iota")
 }
 
+type BlankExpr struct{}
+
+func (this *BlankExpr) isExpr() {}
+
+func (this *BlankExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("_")
+}
+
 type IdentExpr struct {
 	Idents []*IdentPart
 }
@@ -426,7 +435,7 @@ func (this *IdentPart) ResetTypeParams() {
 	this.typeParams = make([]Statement, 0)
 }
 
-type FuncDefStmt struct {
+type FuncDef struct {
 	Static     bool
 	Name       string
 	params     []param
@@ -434,14 +443,19 @@ type FuncDefStmt struct {
 	statements []Statement
 }
 
-func (this *FuncDefStmt) isStmt() {}
+func (this *FuncDef) isExpr() {}
+func (this *FuncDef) isStmt() {}
 
-func (this *FuncDefStmt) Print(indent int) {
+func (this *FuncDef) Print(indent int) {
 	printIndent(indent)
 	if this.Static {
 		fmt.Print("static ")
 	}
-	fmt.Print(this.Name)
+	if this.Name == "" {
+		fmt.Print("fn")
+	} else {
+		fmt.Print(this.Name)
+	}
 	fmt.Print("(")
 	for i, p := range this.params {
 		if i > 0 {
@@ -473,15 +487,15 @@ func (this *FuncDefStmt) Print(indent int) {
 	}
 }
 
-func (this *FuncDefStmt) AddStmt(s Statement) {
+func (this *FuncDef) AddStmt(s Statement) {
 	this.statements = append(this.statements, s)
 }
 
-func (this *FuncDefStmt) AddParam(name string, typ Statement) {
+func (this *FuncDef) AddParam(name string, typ Statement) {
 	this.params = append(this.params, param{name: name, typ: typ})
 }
 
-func (this *FuncDefStmt) AddReturn(r Statement) {
+func (this *FuncDef) AddReturn(r Statement) {
 	this.returns = append(this.returns, r)
 }
 
@@ -552,4 +566,30 @@ func (this variable) String() string {
 		ret += fmt.Sprint(" ", this.typ)
 	}
 	return ret
+}
+
+type ReturnStmt struct {
+	Vals Expression
+}
+
+func (this *ReturnStmt) isStmt() {}
+
+func (this *ReturnStmt) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("ret")
+	if this.Vals != nil {
+		this.Vals.Print(indent + 1)
+	}
+}
+
+type DeferStmt struct {
+	Expr Expression
+}
+
+func (this *DeferStmt) isStmt() {}
+
+func (this *DeferStmt) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("defer")
+	this.Expr.Print(indent + 1)
 }

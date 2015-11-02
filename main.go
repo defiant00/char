@@ -2,20 +2,19 @@
 TODO
 
 Parsing:
-	return
-	as
-	is
 	if
 	if/is
 	for
 	loop
-	interface
-	defer
-	operators
-	proper operator order
 	loop labels
 	break
-
+	interface (intf)
+	all operators
+	proper operator order
+	arrays
+	constructors
+	accessor
+	unary op(s)
 */
 
 package main

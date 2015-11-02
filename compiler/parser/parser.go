@@ -72,14 +72,15 @@ func (p *parser) toNextLine(toNextLine bool) {
 	}
 
 	t := p.peek().Type
-	for t != token.EOL && t != token.EOF {
+	for ; t != token.EOL && t != token.EOF; t = p.peek().Type {
 		p.next()
-		t = p.peek().Type
 	}
 	if t == token.EOL {
 		p.next()
-		for p.peek().Type == token.DEDENT {
-			p.next()
+		for {
+			if succ, _ := p.accept(token.DEDENT, token.EOL); !succ {
+				return
+			}
 		}
 	}
 }
@@ -183,10 +184,10 @@ func (p *parser) parseType() ast.Statement {
 	if p.peek().Type == token.IDENTIFIER {
 		return p.parseTypeIdent()
 	}
-	return p.parseAnonFuncType()
+	return p.parseFuncSigType()
 }
 
-func (p *parser) parseAnonFuncType() ast.Statement {
+func (p *parser) parseFuncSigType() ast.Statement {
 	f := &ast.FuncSigType{}
 
 	// func(types)
@@ -264,7 +265,7 @@ func (p *parser) parseClass(mixin bool) ast.Statement {
 		c.AddStmt(p.parseClassStmt())
 	}
 
-	if succ, toks := p.accept(token.DEDENT); !succ {
+	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
 		c.AddStmt(p.errorStmt(true, "Invalid token in class %v declaration: %v", c.Name, toks[len(toks)-1]))
 	}
 
@@ -285,6 +286,10 @@ func (p *parser) parseFuncStmt() ast.Statement {
 	switch p.peek().Type {
 	case token.VAR:
 		return p.parseFuncStmtVar()
+	case token.RETURN:
+		return p.parseFuncStmtReturn()
+	case token.DEFER:
+		return p.parseFuncStmtDefer()
 	default:
 		return p.parseExprStmt()
 	}
@@ -300,6 +305,27 @@ func (p *parser) parseExprStmt() ast.Statement {
 		}
 	}
 	return &ast.ExprStmt{Expr: ex}
+}
+
+func (p *parser) parseFuncStmtReturn() ast.Statement {
+	p.next() // eat ret
+	r := &ast.ReturnStmt{}
+	if p.peek().Type != token.EOL {
+		r.Vals = p.parseExpr()
+	}
+	if succ, toks := p.accept(token.EOL); !succ {
+		r.Vals = p.errorExpr(true, "Invalid token in return statement: %v", toks[len(toks)-1])
+	}
+	return r
+}
+
+func (p *parser) parseFuncStmtDefer() ast.Statement {
+	p.next() // eat defer
+	d := &ast.DeferStmt{Expr: p.parseExpr()}
+	if succ, toks := p.accept(token.EOL); !succ {
+		d.Expr = p.errorExpr(true, "Invalid token in defer statement: %v", toks[len(toks)-1])
+	}
+	return d
 }
 
 func (p *parser) parseFuncStmtVar() ast.Statement {
@@ -323,7 +349,7 @@ func (p *parser) parseFuncStmtVar() ast.Statement {
 			vs.AddLine(vsl.(*ast.VarSetLine))
 		}
 
-		if succ, toks := p.accept(token.DEDENT); !succ {
+		if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
 			return p.errorStmt(true, "Invalid token in var statement: %v", toks[len(toks)-1])
 		}
 	}
@@ -334,11 +360,10 @@ func (p *parser) parseFuncStmtVar() ast.Statement {
 func (p *parser) parseFuncStmtVarLine() ast.Statement {
 	v := &ast.VarSetLine{}
 	for {
-		succ, toks := p.accept(token.IDENTIFIER)
-		if !succ {
-			return p.errorStmt(true, "Invalid token in var statement: %v", toks[len(toks)-1])
+		if p.peek().Type != token.IDENTIFIER && p.peek().Type != token.BLANK {
+			return p.errorStmt(true, "Invalid token in var statement: %v", p.peek())
 		}
-		name := toks[0].Val
+		name := p.next().Val
 
 		var typ ast.Statement
 		if p.peek().Type.IsType() {
@@ -346,7 +371,7 @@ func (p *parser) parseFuncStmtVarLine() ast.Statement {
 		}
 
 		v.AddVar(name, typ)
-		if succ, _ = p.accept(token.COMMA); !succ {
+		if succ, _ := p.accept(token.COMMA); !succ {
 			break
 		}
 	}
@@ -375,7 +400,7 @@ func (p *parser) parseClassStmtIdent() ast.Statement {
 		var typ ast.Statement
 		switch t := p.peek().Type; {
 		case t == token.LEFTPAREN:
-			return p.parseFunctionDef(dotted, name)
+			return p.parseFuncDef(dotted, name)
 		case t.IsType():
 			typ = p.parseType()
 		}
@@ -421,15 +446,22 @@ func (p *parser) parseReturnValues() []ast.Statement {
 	return rvs
 }
 
-// parseFunctionDef parses a function definition with the optional dot and name
+func (p *parser) parseAnonFuncExpr() ast.Expression {
+	p.next() // eat fn
+	return p.parseFuncDef(true, "").(ast.Expression)
+}
+
+// parseFuncDef parses a function definition with the optional dot and name
 // already consumed.
-func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
-	p.next() // eat (
-	f := &ast.FuncDefStmt{Static: !dotted, Name: name}
+func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
+	if succ, toks := p.accept(token.LEFTPAREN); !succ {
+		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
+	}
+	f := &ast.FuncDef{Static: !dotted, Name: name}
 	for p.peek().Type != token.RIGHTPAREN {
 		succ, toks := p.accept(token.IDENTIFIER)
 		if !succ {
-			return p.errorStmt(true, "Invalid token in function %v definition: %v", name, p.peek())
+			return p.errorStmt(true, "Invalid token in function definition: %v", p.peek())
 		}
 		name := toks[0].Val
 		var typ ast.Statement
@@ -442,11 +474,11 @@ func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
 			p.next() // eat ,
 		case token.RIGHTPAREN:
 		default:
-			return p.errorStmt(true, "Invalid token in function %v definition: %v", name, p.peek())
+			return p.errorStmt(true, "Invalid token in function definition: %v", p.peek())
 		}
 	}
 	if succ, toks := p.accept(token.RIGHTPAREN); !succ {
-		return p.errorStmt(true, "Invalid token in function %v definition: %v", name, toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
 	}
 
 	// return value(s)
@@ -456,15 +488,21 @@ func (p *parser) parseFunctionDef(dotted bool, name string) ast.Statement {
 	}
 
 	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
-		return p.errorStmt(true, "Invalid token in function %v definition: %v", name, toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
 	}
 
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
 		f.AddStmt(p.parseFuncStmt())
 	}
 
-	if succ, toks := p.accept(token.DEDENT); !succ {
-		f.AddStmt(p.errorStmt(true, "Invalid token in function %v definition: %v", name, toks[len(toks)-1]))
+	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
+		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
+	}
+
+	// If it's an anonymous function and we're not in the middle of a block
+	// (followed by either a ',' or ')' ) then put the EOL back.
+	if name == "" && !p.peek().Type.IsInBlock() {
+		p.backup(1)
 	}
 
 	return f
@@ -478,6 +516,8 @@ func (p *parser) parsePrimaryExpr() ast.Expression {
 		return p.parseIdentExpr()
 	case token.IOTA:
 		return p.parseIotaExpr()
+	case token.BLANK:
+		return p.parseBlankExpr()
 	case token.STRING:
 		return p.parseStringExpr()
 	case token.NUMBER:
@@ -486,6 +526,8 @@ func (p *parser) parsePrimaryExpr() ast.Expression {
 		return p.parseCharExpr()
 	case token.TRUE, token.FALSE:
 		return p.parseBoolExpr()
+	case token.FUNCTION:
+		return p.parseAnonFuncExpr()
 	}
 	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
 }
@@ -552,8 +594,13 @@ func (p *parser) parseNumberExpr() ast.Expression {
 }
 
 func (p *parser) parseIotaExpr() ast.Expression {
-	p.next()
+	p.next() // eat iota
 	return &ast.IotaExpr{}
+}
+
+func (p *parser) parseBlankExpr() ast.Expression {
+	p.next() // eat _
+	return &ast.BlankExpr{}
 }
 
 func (p *parser) parseStringExpr() ast.Expression {
@@ -650,7 +697,7 @@ func (p *parser) parseUse() ast.Statement {
 			u.AddPackage(pack, alias)
 			err, pack, alias, errTok = p.parseUsePackage()
 		}
-		if succ, _ = p.accept(token.DEDENT); succ {
+		if succ, _ = p.accept(token.DEDENT, token.EOL); succ {
 			return u
 		}
 		return p.errorStmt(true, "Invalid token found when parsing Use: %v", errTok)

@@ -1,8 +1,18 @@
-mix loc
-	.X, .Y int
-	.Move(x, y int)
-		X, Y += x, y
-
-myClass with loc
-	.Print()
-		fmt.Print('(' + X + ", " + Y + ')')
+main
+	main()
+		_ = 3
+		_, x = 3, 7
+		x, _ = 3, 7
+		var x, _ = 3, 7
+		var _, x = 3, 7
+		var f1, f2, f3 = fn() int
+			ret 3
+		, fn()
+			ret
+		, fn(x, y int) bool
+			ret x == y
+		var _
+			f4 = fn() int
+				ret 4
+			f5 = fn() int
+				ret 5
