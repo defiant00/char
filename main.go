@@ -10,6 +10,11 @@ Parsing:
 	for
 	loop
 	interface
+	defer
+	operators
+	proper operator order
+	loop labels
+	break
 
 */
 
