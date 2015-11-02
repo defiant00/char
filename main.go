@@ -2,13 +2,10 @@
 TODO
 
 Parsing:
-	if
-	if/is
 	for
 	loop
 	loop labels
 	break
-	interface (intf)
 	all operators
 	proper operator order
 	arrays

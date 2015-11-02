@@ -34,9 +34,11 @@ const (
 	keyword_start             //
 	USE                       // 'use'
 	AS                        // 'as'
+	IF                        // 'if'
 	IS                        // 'is'
 	WITH                      // 'with'
 	FUNCTION                  // 'fn'
+	INTERFACE                 // 'intf'
 	MIXIN                     // 'mix'
 	VAR                       // 'var'
 	BLANK                     // '_'
@@ -82,9 +84,11 @@ var tStrings = map[Type]string{
 	IDENTIFIER: "id",
 	USE:        "use",
 	AS:         "as",
+	IF:         "if",
 	IS:         "is",
 	WITH:       "with",
 	FUNCTION:   "fn",
+	INTERFACE:  "intf",
 	MIXIN:      "mix",
 	VAR:        "var",
 	BLANK:      "_",
@@ -119,9 +123,11 @@ var tStrings = map[Type]string{
 var Keywords = map[string]Type{
 	"use":   USE,
 	"as":    AS,
+	"if":    IF,
 	"is":    IS,
 	"with":  WITH,
 	"fn":    FUNCTION,
+	"intf":  INTERFACE,
 	"mix":   MIXIN,
 	"var":   VAR,
 	"_":     BLANK,
@@ -173,23 +179,23 @@ func (t Token) String() string {
 func (t Token) Precedence() int {
 	switch t.Type {
 	case ASSIGN, ADDASSIGN, SUBASSIGN, MULASSIGN, DIVASSIGN, MODASSIGN:
-		return 1
-	case COMMA:
-		return 2
-	case ADD, SUB:
-		return 3
-	case MUL, DIV, MOD:
-		return 4
-	case EQUALS, NOTEQUALS:
-		return 5
-	case AND, OR, IS:
-		return 6
-	case LEFTCARET, RIGHTCARET:
-		return 7
-	case AS:
-		return 8
-	case DOT:
 		return 10
+	case COMMA:
+		return 22
+	case AND, OR:
+		return 30
+	case LEFTCARET, RIGHTCARET, EQUALS, NOTEQUALS:
+		return 40
+	case ADD, SUB:
+		return 50
+	case MUL, DIV, MOD:
+		return 60
+	case IS:
+		return 70
+	case AS:
+		return 80
+	case DOT:
+		return 100
 	}
 	return -1
 }

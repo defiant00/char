@@ -593,3 +593,122 @@ func (this *DeferStmt) Print(indent int) {
 	fmt.Println("defer")
 	this.Expr.Print(indent + 1)
 }
+
+type InterfaceStmt struct {
+	Name     string
+	funcSigs []Statement
+}
+
+func (this *InterfaceStmt) isStmt() {}
+
+func (this *InterfaceStmt) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("interface", this.Name)
+	for _, f := range this.funcSigs {
+		f.Print(indent + 1)
+	}
+}
+
+func (this *InterfaceStmt) AddFuncSig(i Statement) {
+	this.funcSigs = append(this.funcSigs, i)
+}
+
+type IntfFuncSig struct {
+	Name    string
+	params  []Statement
+	returns []Statement
+}
+
+func (this *IntfFuncSig) isStmt() {}
+
+func (this *IntfFuncSig) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(this)
+}
+
+func (this *IntfFuncSig) String() string {
+	ret := this.Name + "("
+	for i, p := range this.params {
+		if i > 0 {
+			ret += ", "
+		}
+		ret += fmt.Sprint(p)
+	}
+	ret += ")"
+	if len(this.returns) > 0 {
+		ret += " "
+		if len(this.returns) > 1 {
+			ret += "("
+		}
+		for i, r := range this.returns {
+			if i > 0 {
+				ret += ", "
+			}
+			ret += fmt.Sprint(r)
+		}
+		if len(this.returns) > 1 {
+			ret += ")"
+		}
+	}
+	return ret
+}
+
+func (this *IntfFuncSig) AddParam(p Statement) {
+	this.params = append(this.params, p)
+}
+
+func (this *IntfFuncSig) AddReturn(r Statement) {
+	this.returns = append(this.returns, r)
+}
+
+type If struct {
+	Condition Expression
+	With      Statement
+	stmts     []Statement
+}
+
+func (this *If) isStmt() {}
+
+func (this *If) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("if")
+	if this.Condition != nil {
+		this.Condition.Print(indent + 1)
+	}
+	if this.With != nil {
+		printIndent(indent + 1)
+		fmt.Println("with")
+		this.With.Print(indent + 2)
+	}
+	printIndent(indent + 1)
+	fmt.Println("then")
+	for _, s := range this.stmts {
+		s.Print(indent + 2)
+	}
+}
+
+func (this *If) AddStmt(s Statement) {
+	this.stmts = append(this.stmts, s)
+}
+
+type Is struct {
+	Condition Expression
+	stmts     []Statement
+}
+
+func (this *Is) isStmt() {}
+
+func (this *Is) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("is")
+	this.Condition.Print(indent + 1)
+	printIndent(indent + 1)
+	fmt.Println("then")
+	for _, s := range this.stmts {
+		s.Print(indent + 2)
+	}
+}
+
+func (this *Is) AddStmt(s Statement) {
+	this.stmts = append(this.stmts, s)
+}

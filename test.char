@@ -1,18 +1,11 @@
 main
 	main()
-		_ = 3
-		_, x = 3, 7
-		x, _ = 3, 7
-		var x, _ = 3, 7
-		var _, x = 3, 7
-		var f1, f2, f3 = fn() int
-			ret 3
-		, fn()
-			ret
-		, fn(x, y int) bool
-			ret x == y
-		var _
-			f4 = fn() int
-				ret 4
-			f5 = fn() int
-				ret 5
+		if with var x = 3
+			is x == 3
+				print("hi")
+			is x != 1 and test(x)
+				print("two")
+			is _
+				print("lucky!")
+	test(x int) bool
+		ret x * 2 > 7
