@@ -1,11 +1,3 @@
 main
 	main()
-		if with var x = 3
-			is x == 3
-				print("hi")
-			is x != 1 and test(x)
-				print("two")
-			is _
-				print("lucky!")
-	test(x int) bool
-		ret x * 2 > 7
+		var x []int

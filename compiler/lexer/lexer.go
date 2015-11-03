@@ -11,7 +11,7 @@ import (
 
 const (
 	eof           = -1
-	operatorChars = "()[]<>!=+-*/%,._"
+	operatorChars = "()[]<>{}!=+-*/%,._:&|^"
 )
 
 type stateFn func(*Lexer) stateFn

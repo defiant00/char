@@ -290,6 +290,19 @@ func (this property) String() string {
 	return ret
 }
 
+type UnaryExpr struct {
+	Expr Expression
+	Op   token.Type
+}
+
+func (this *UnaryExpr) isExpr() {}
+
+func (this *UnaryExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(this.Op)
+	this.Expr.Print(indent + 1)
+}
+
 type BinaryExpr struct {
 	Left, Right Expression
 	Op          token.Type
@@ -711,4 +724,66 @@ func (this *Is) Print(indent int) {
 
 func (this *Is) AddStmt(s Statement) {
 	this.stmts = append(this.stmts, s)
+}
+
+type For struct {
+	Label string
+	vars  []string
+	In    Expression
+	stmts []Statement
+}
+
+func (this *For) isStmt() {}
+
+func (this *For) Print(indent int) {
+	printIndent(indent)
+	if len(this.Label) > 0 {
+		fmt.Print(this.Label, ": ")
+	}
+	fmt.Println("for", strings.Join(this.vars, ", "), "in")
+	this.In.Print(indent + 2)
+	for _, s := range this.stmts {
+		s.Print(indent + 1)
+	}
+}
+
+func (this *For) AddVar(v string) {
+	this.vars = append(this.vars, v)
+}
+
+func (this *For) AddStmt(s Statement) {
+	this.stmts = append(this.stmts, s)
+}
+
+type Loop struct {
+	Label string
+	stmts []Statement
+}
+
+func (this *Loop) isStmt() {}
+
+func (this *Loop) Print(indent int) {
+	printIndent(indent)
+	if len(this.Label) > 0 {
+		fmt.Print(this.Label, ": ")
+	}
+	fmt.Println("loop")
+	for _, s := range this.stmts {
+		s.Print(indent + 1)
+	}
+}
+
+func (this *Loop) AddStmt(s Statement) {
+	this.stmts = append(this.stmts, s)
+}
+
+type Break struct {
+	Label string
+}
+
+func (this *Break) isStmt() {}
+
+func (this *Break) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("break", this.Label)
 }

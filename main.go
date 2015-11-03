@@ -2,16 +2,11 @@
 TODO
 
 Parsing:
-	for
-	loop
-	loop labels
-	break
-	all operators
-	proper operator order
 	arrays
+	array initializer
+	array constructor
 	constructors
 	accessor
-	unary op(s)
 */
 
 package main
