@@ -229,10 +229,9 @@ var Keywords = map[string]Type{
 	"*":     MUL,
 	"/":     DIV,
 	"%":     MOD,
-	"<<":    LSHIFT,
-	">>":    RSHIFT,
-	"&":     B_AND,
-	"|":     B_OR,
+	"<<":    LSHIFT, // RSHIFT purposefully excluded since it clashes
+	"&":     B_AND,  // with generics. See parser.peekCombo and
+	"|":     B_OR,   // parser.nextCombo for where this is handled.
 	"^":     B_XOR,
 	"!":     NOT,
 }
@@ -257,23 +256,18 @@ func (t Token) String() string {
 func (t Token) Precedence() int {
 	switch t.Type {
 	case DOT:
-		return 9
-	case AS, IS:
-		return 8
-	case MUL, DIV, MOD, LSHIFT, RSHIFT, B_AND:
 		return 7
-	case ADD, SUB, B_OR, B_XOR:
+	case AS, IS:
 		return 6
-	case EQUAL, NOT_EQUAL, LEFT_CARET, LT_EQUAL, RIGHT_CARET, GT_EQUAL:
+	case MUL, DIV, MOD, LSHIFT, RSHIFT, B_AND:
 		return 5
-	case AND:
+	case ADD, SUB, B_OR, B_XOR:
 		return 4
-	case OR:
+	case EQUAL, NOT_EQUAL, LEFT_CARET, LT_EQUAL, RIGHT_CARET, GT_EQUAL:
 		return 3
-	case COMMA:
+	case AND:
 		return 2
-	}
-	if t.Type.IsAssign() {
+	case OR:
 		return 1
 	}
 	return -1

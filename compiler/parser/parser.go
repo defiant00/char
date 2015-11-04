@@ -95,6 +95,30 @@ func (p *parser) next() token.Token {
 	return t
 }
 
+// peekCombo returns the next token, or combines >>
+// into rshift.
+func (p *parser) peekCombo() token.Token {
+	t := p.next()
+	t2 := p.peek()
+	p.backup(1)
+	if t.Type == token.RIGHT_CARET && t2.Type == token.RIGHT_CARET {
+		return token.Token{Type: token.RSHIFT, Pos: t.Pos}
+	}
+	return t
+}
+
+// nextCombo consumes and returns the next token, or
+// combines >> into rshift.
+func (p *parser) nextCombo() token.Token {
+	t := p.next()
+	t2 := p.next()
+	if t.Type == token.RIGHT_CARET && t2.Type == token.RIGHT_CARET {
+		return token.Token{Type: token.RSHIFT, Pos: t.Pos}
+	}
+	p.backup(1)
+	return t
+}
+
 func (p *parser) backup(count int) {
 	p.pos -= count
 }
@@ -157,8 +181,7 @@ func (p *parser) parseInterface() ast.Statement {
 		if !succ {
 			return p.errorStmt(true, "Invalid token in interface %v: %v", name, toks[len(toks)-1])
 		}
-		fsName := toks[0].Val
-		fs := &ast.IntfFuncSig{Name: fsName}
+		fs := &ast.IntfFuncSig{Name: toks[0].Val}
 		for p.peek().Type != token.RIGHT_PAREN {
 			fs.AddParam(p.parseType())
 			switch p.peek().Type {
@@ -166,7 +189,7 @@ func (p *parser) parseInterface() ast.Statement {
 				p.next() // eat ,
 			case token.RIGHT_PAREN:
 			default:
-				return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fsName, p.peek())
+				return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fs.Name, p.peek())
 			}
 		}
 		p.next() // eat )
@@ -178,7 +201,7 @@ func (p *parser) parseInterface() ast.Statement {
 		}
 
 		if succ, _ = p.accept(token.EOL); !succ {
-			return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fsName, p.peek())
+			return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fs.Name, p.peek())
 		}
 		intf.AddFuncSig(fs)
 	}
@@ -449,11 +472,7 @@ func (p *parser) parseIfInnerStmt() ast.Statement {
 
 func (p *parser) parseIsStmt() ast.Statement {
 	p.next() // eat is
-	cond := p.parseExpr()
-	switch cond.(type) {
-	case *ast.Error:
-		return cond.(ast.Statement)
-	}
+	cond := p.parseExprList()
 	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
 		return p.errorStmt(true, "Invalid token in is statement: %v", toks[len(toks)-1])
 	}
@@ -506,24 +525,33 @@ func (p *parser) parseIfStmt() ast.Statement {
 }
 
 func (p *parser) parseExprStmt(inWith bool) ast.Statement {
-	ex := p.parseExpr()
-	switch ex.(type) {
-	case *ast.Error:
-	default:
-		if !inWith {
-			if succ, toks := p.accept(token.EOL); !succ {
-				return p.errorStmt(true, "Invalid token in expression statement: %v", toks[len(toks)-1])
-			}
+	ex := p.parseExprList()
+	var assign ast.Statement
+	if p.peek().Type.IsAssign() {
+		assign = p.parseAssignStmt(ex)
+	}
+	if !inWith {
+		if succ, toks := p.accept(token.EOL); !succ {
+			return p.errorStmt(true, "Invalid token in expression statement: %v", toks[len(toks)-1])
 		}
 	}
+	if assign != nil {
+		return assign
+	}
 	return &ast.ExprStmt{Expr: ex}
+}
+
+func (p *parser) parseAssignStmt(lhs ast.Expression) ast.Statement {
+	op := p.next().Type
+	rhs := p.parseExprList()
+	return &ast.AssignStmt{Op: op, Left: lhs, Right: rhs}
 }
 
 func (p *parser) parseReturnStmt() ast.Statement {
 	p.next() // eat ret
 	r := &ast.ReturnStmt{}
 	if p.peek().Type != token.EOL {
-		r.Vals = p.parseExpr()
+		r.Vals = p.parseExprList()
 	}
 	if succ, toks := p.accept(token.EOL); !succ {
 		r.Vals = p.errorExpr(true, "Invalid token in return statement: %v", toks[len(toks)-1])
@@ -591,7 +619,7 @@ func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
 	}
 
 	if succ, _ := p.accept(token.ASSIGN); succ {
-		v.Vals = p.parseExpr()
+		v.Vals = p.parseExprList()
 	}
 
 	if !inWith {
@@ -600,6 +628,23 @@ func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
 		}
 	}
 	return v
+}
+
+func (p *parser) parseExprList() *ast.ExprList {
+	el := &ast.ExprList{}
+loop:
+	for {
+		e := p.parseExpr()
+		el.AddExpr(e)
+		switch e.(type) {
+		case *ast.Error:
+			break loop
+		}
+		if succ, _ := p.accept(token.COMMA); !succ {
+			break loop
+		}
+	}
+	return el
 }
 
 func (p *parser) parseClassStmtIdent() ast.Statement {
@@ -628,7 +673,7 @@ func (p *parser) parseClassStmtIdent() ast.Statement {
 	}
 
 	if succ, _ := p.accept(token.ASSIGN); succ {
-		ps.Vals = p.parseExpr()
+		ps.Vals = p.parseExprList()
 	}
 
 	if succ, toks := p.accept(token.EOL); !succ {
@@ -809,7 +854,7 @@ func (p *parser) parseFuncCallStmt(lhs ast.Expression) ast.Expression {
 	p.next() // eat (
 	fc := &ast.FuncCallExpr{Function: lhs}
 	if p.peek().Type != token.RIGHT_PAREN {
-		fc.Params = p.parseExpr()
+		fc.Params = p.parseExprList()
 	}
 	if succ, toks := p.accept(token.RIGHT_PAREN); !succ {
 		return p.errorExpr(true, "Invalid token in function call: %v", toks[len(toks)-1])
@@ -897,7 +942,7 @@ func (p *parser) parseExpr() ast.Expression {
 
 func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression {
 	for {
-		tokPrec := p.peek().Precedence()
+		tokPrec := p.peekCombo().Precedence()
 
 		// If this is a binary operator that binds as tightly as the
 		// current one, consume it. Otherwise we're done.
@@ -905,7 +950,7 @@ func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression 
 			return lhs
 		}
 
-		op := p.next()
+		op := p.nextCombo()
 
 		rhs := p.parsePrimaryExpr()
 		switch rhs.(type) {
@@ -915,7 +960,7 @@ func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression 
 
 		// If binop binds less tightly with RHS than the operator after RHS,
 		// let the pending op take RHS as its LHS.
-		nextPrec := p.peek().Precedence()
+		nextPrec := p.peekCombo().Precedence()
 		if tokPrec < nextPrec {
 			rhs = p.parseBinopRHS(tokPrec+1, rhs)
 			switch rhs.(type) {

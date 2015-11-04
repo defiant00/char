@@ -317,6 +317,20 @@ func (this *BinaryExpr) Print(indent int) {
 	this.Right.Print(indent + 1)
 }
 
+type AssignStmt struct {
+	Left, Right Expression
+	Op          token.Type
+}
+
+func (this *AssignStmt) isStmt() {}
+
+func (this *AssignStmt) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("assign", this.Op)
+	this.Left.Print(indent + 1)
+	this.Right.Print(indent + 1)
+}
+
 type StringExpr struct {
 	Val string
 }
@@ -402,7 +416,7 @@ func (this *IdentExpr) AddIdent(i *IdentPart) {
 
 type FuncCallExpr struct {
 	Function Expression
-	Params   Expression
+	Params   *ExprList
 }
 
 func (this *FuncCallExpr) isExpr() {}
@@ -590,7 +604,7 @@ func (this *VarSet) AddLine(vsl *VarSetLine) {
 
 type VarSetLine struct {
 	vars []variable
-	Vals Expression
+	Vals *ExprList
 }
 
 func (this *VarSetLine) isStmt() {}
@@ -624,6 +638,24 @@ func (this variable) String() string {
 		ret += fmt.Sprint(" ", this.typ)
 	}
 	return ret
+}
+
+type ExprList struct {
+	exprs []Expression
+}
+
+func (this *ExprList) isExpr() {}
+
+func (this *ExprList) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("expression list")
+	for _, e := range this.exprs {
+		e.Print(indent + 1)
+	}
+}
+
+func (this *ExprList) AddExpr(e Expression) {
+	this.exprs = append(this.exprs, e)
 }
 
 type ReturnStmt struct {
