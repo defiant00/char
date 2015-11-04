@@ -72,10 +72,10 @@ const (
 	COLON                      // ':'
 	LEFT_PAREN                 // '('
 	RIGHT_PAREN                // ')'
-	LEFT_BRACE                 // '['
-	RIGHT_BRACE                // ']'
-	LEFT_BRACKET               // '{'
-	RIGHT_BRACKET              // '}'
+	LEFT_BRACKET               // '['
+	RIGHT_BRACKET              // ']'
+	LEFT_CURLY                 // '{'
+	RIGHT_CURLY                // '}'
 	assign_start               //
 	ASSIGN                     // '='
 	ADD_ASSIGN                 // '+='
@@ -148,10 +148,10 @@ var tStrings = map[Type]string{
 	COLON:         ":",
 	LEFT_PAREN:    "(",
 	RIGHT_PAREN:   ")",
-	LEFT_BRACE:    "[",
-	RIGHT_BRACE:   "]",
-	LEFT_BRACKET:  "{",
-	RIGHT_BRACKET: "}",
+	LEFT_BRACKET:  "[",
+	RIGHT_BRACKET: "]",
+	LEFT_CURLY:    "{",
+	RIGHT_CURLY:   "}",
 	ASSIGN:        "=",
 	ADD_ASSIGN:    "+=",
 	SUB_ASSIGN:    "-=",
@@ -164,6 +164,7 @@ var tStrings = map[Type]string{
 	LSHIFT_ASSIGN: "<<=",
 	RSHIFT_ASSIGN: ">>=",
 	ADD:           "+",
+	SUB:           "-",
 	MUL:           "*",
 	DIV:           "/",
 	MOD:           "%",
@@ -172,7 +173,6 @@ var tStrings = map[Type]string{
 	B_AND:         "&",
 	B_OR:          "|",
 	B_XOR:         "^",
-	SUB:           "-",
 	NOT:           "!",
 }
 
@@ -209,10 +209,10 @@ var Keywords = map[string]Type{
 	":":     COLON,
 	"(":     LEFT_PAREN,
 	")":     RIGHT_PAREN,
-	"[":     LEFT_BRACE,
-	"]":     RIGHT_BRACE,
-	"{":     LEFT_BRACKET,
-	"}":     RIGHT_BRACKET,
+	"[":     LEFT_BRACKET,
+	"]":     RIGHT_BRACKET,
+	"{":     LEFT_CURLY,
+	"}":     RIGHT_CURLY,
 	"=":     ASSIGN,
 	"+=":    ADD_ASSIGN,
 	"-=":    SUB_ASSIGN,
@@ -225,6 +225,7 @@ var Keywords = map[string]Type{
 	"<<=":   LSHIFT_ASSIGN,
 	">>=":   RSHIFT_ASSIGN,
 	"+":     ADD,
+	"-":     SUB,
 	"*":     MUL,
 	"/":     DIV,
 	"%":     MOD,
@@ -233,7 +234,6 @@ var Keywords = map[string]Type{
 	"&":     B_AND,
 	"|":     B_OR,
 	"^":     B_XOR,
-	"-":     SUB,
 	"!":     NOT,
 }
 

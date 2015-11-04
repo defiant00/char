@@ -725,31 +725,96 @@ func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
 }
 
 func (p *parser) parsePrimaryExpr() ast.Expression {
+	var lhs ast.Expression
 	switch p.peek().Type {
 	case token.LEFT_PAREN:
-		return p.parseParenExpr()
+		lhs = p.parseParenExpr()
 	case token.IDENTIFIER:
-		return p.parseIdentExpr()
+		lhs = p.parseIdentExpr()
 	case token.IOTA:
-		return p.parseIotaExpr()
+		lhs = p.parseIotaExpr()
 	case token.BLANK:
-		return p.parseBlankExpr()
+		lhs = p.parseBlankExpr()
 	case token.STRING:
-		return p.parseStringExpr()
+		lhs = p.parseStringExpr()
 	case token.NUMBER:
-		return p.parseNumberExpr()
+		lhs = p.parseNumberExpr()
 	case token.CHAR:
-		return p.parseCharExpr()
+		lhs = p.parseCharExpr()
 	case token.TRUE, token.FALSE:
-		return p.parseBoolExpr()
+		lhs = p.parseBoolExpr()
 	case token.FUNCTION:
-		return p.parseAnonFuncExpr()
+		lhs = p.parseAnonFuncExpr()
 	default:
 		if p.peek().Type.IsUnaryOp() {
-			return p.parseUnaryExpr()
+			lhs = p.parseUnaryExpr()
 		}
-		return p.errorExpr(true, "Token is not an expression: %v", p.peek())
 	}
+
+	if lhs != nil {
+		// Function calls and accessors.
+	loop:
+		for {
+			switch p.peek().Type {
+			case token.LEFT_BRACKET:
+				lhs = p.parseAccessorStmt(lhs)
+			case token.LEFT_PAREN:
+				lhs = p.parseFuncCallStmt(lhs)
+			default:
+				break loop
+			}
+		}
+		return lhs
+	}
+
+	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
+}
+
+func (p *parser) parseAccessorStmt(lhs ast.Expression) ast.Expression {
+	p.next() // eat [
+
+	var low, high ast.Expression
+	isRange := false
+
+	if p.peek().Type != token.COLON {
+		low = p.parseExpr()
+		switch low.(type) {
+		case *ast.Error:
+			return low
+		}
+	}
+
+	if succ, _ := p.accept(token.COLON); succ {
+		isRange = true
+		if p.peek().Type != token.RIGHT_BRACKET {
+			high = p.parseExpr()
+			switch high.(type) {
+			case *ast.Error:
+				return high
+			}
+		}
+	}
+
+	if succ, toks := p.accept(token.RIGHT_BRACKET); !succ {
+		return p.errorExpr(true, "Invalid token in accessor: %v", toks[len(toks)-1])
+	}
+
+	if isRange {
+		return &ast.AccessorRangeExpr{Object: lhs, Low: low, High: high}
+	}
+	return &ast.AccessorExpr{Object: lhs, Index: low}
+}
+
+func (p *parser) parseFuncCallStmt(lhs ast.Expression) ast.Expression {
+	p.next() // eat (
+	fc := &ast.FuncCallExpr{Function: lhs}
+	if p.peek().Type != token.RIGHT_PAREN {
+		fc.Params = p.parseExpr()
+	}
+	if succ, toks := p.accept(token.RIGHT_PAREN); !succ {
+		return p.errorExpr(true, "Invalid token in function call: %v", toks[len(toks)-1])
+	}
+	return fc
 }
 
 func (p *parser) parseUnaryExpr() ast.Expression {
@@ -767,7 +832,7 @@ func (p *parser) parseParenExpr() ast.Expression {
 }
 
 func (p *parser) parseIdentExpr() ast.Expression {
-	ips := make([]*ast.IdentPart, 0, 1)
+	ie := &ast.IdentExpr{}
 	for {
 		succ, toks := p.accept(token.IDENTIFIER)
 		if !succ {
@@ -787,23 +852,12 @@ func (p *parser) parseIdentExpr() ast.Expression {
 				ip.ResetTypeParams() // and reset type parameters
 			}
 		}
-		ips = append(ips, ip)
+		ie.AddIdent(ip)
 		if succ, _ := p.accept(token.DOT); !succ {
 			break
 		}
 	}
-	if p.peek().Type == token.LEFT_PAREN {
-		p.next() // eat (
-		fc := &ast.FuncCallExpr{Idents: ips}
-		if p.peek().Type != token.RIGHT_PAREN {
-			fc.Params = p.parseExpr()
-		}
-		if succ, toks := p.accept(token.RIGHT_PAREN); !succ {
-			return p.errorExpr(true, "Invalid token in function call: %v", toks[len(toks)-1])
-		}
-		return fc
-	}
-	return &ast.IdentExpr{Idents: ips}
+	return ie
 }
 
 func (p *parser) parseBoolExpr() ast.Expression {

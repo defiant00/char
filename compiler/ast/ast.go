@@ -380,14 +380,14 @@ func (this *BlankExpr) Print(indent int) {
 }
 
 type IdentExpr struct {
-	Idents []*IdentPart
+	idents []*IdentPart
 }
 
 func (this *IdentExpr) isExpr() {}
 
 func (this *IdentExpr) Print(indent int) {
 	printIndent(indent)
-	for i, id := range this.Idents {
+	for i, id := range this.idents {
 		if i > 0 {
 			fmt.Print(".")
 		}
@@ -396,25 +396,70 @@ func (this *IdentExpr) Print(indent int) {
 	fmt.Println()
 }
 
+func (this *IdentExpr) AddIdent(i *IdentPart) {
+	this.idents = append(this.idents, i)
+}
+
 type FuncCallExpr struct {
-	Idents []*IdentPart
-	Params Expression
+	Function Expression
+	Params   Expression
 }
 
 func (this *FuncCallExpr) isExpr() {}
 
 func (this *FuncCallExpr) Print(indent int) {
 	printIndent(indent)
-	fmt.Print("func ")
-	for i, id := range this.Idents {
-		if i > 0 {
-			fmt.Print(".")
-		}
-		fmt.Print(id)
-	}
-	fmt.Println()
+	fmt.Println("func")
+	this.Function.Print(indent + 2)
+	printIndent(indent + 1)
+	fmt.Println("params")
 	if this.Params != nil {
-		this.Params.Print(indent + 1)
+		this.Params.Print(indent + 2)
+	}
+}
+
+type AccessorExpr struct {
+	Object Expression
+	Index  Expression
+}
+
+func (this *AccessorExpr) isExpr() {}
+
+func (this *AccessorExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("accessor")
+	this.Object.Print(indent + 2)
+	printIndent(indent + 1)
+	fmt.Println("index")
+	this.Index.Print(indent + 2)
+}
+
+type AccessorRangeExpr struct {
+	Object    Expression
+	Low, High Expression
+}
+
+func (this *AccessorRangeExpr) isExpr() {}
+
+func (this *AccessorRangeExpr) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("range accessor")
+	this.Object.Print(indent + 2)
+	printIndent(indent + 1)
+	fmt.Println("from")
+	if this.Low != nil {
+		this.Low.Print(indent + 2)
+	} else {
+		printIndent(indent + 2)
+		fmt.Println("implicit 0")
+	}
+	printIndent(indent + 1)
+	fmt.Println("to")
+	if this.High != nil {
+		this.High.Print(indent + 2)
+	} else {
+		printIndent(indent + 2)
+		fmt.Println("implicit length - 1")
 	}
 }
 

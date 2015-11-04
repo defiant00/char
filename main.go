@@ -2,11 +2,9 @@
 TODO
 
 Parsing:
-	arrays
 	array initializer
 	array constructor
 	constructors
-	accessor
 */
 
 package main
