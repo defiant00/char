@@ -2,16 +2,11 @@
 TODO
 
 Parsing:
-	array types = []type
-	array literal vals = {1, 2, 3}
-	array constructor forms:
-		var a = {1, 2, 3}
-			a = []int{12}
 	constructor forms:
 		var a = myClass{first: "first", last: "last"}
 			a = myClass{
-					first: "first",		; commas optional
-					last:  "last",
+					first: "first",
+					last:  "last"
 				}
 */
 

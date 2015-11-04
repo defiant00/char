@@ -1,5 +1,9 @@
-l<l<int>> as testList
 
 main
 	main()
-		var x = 3 >> 2 << 4 >> 7 << 5
+		var x = {f, s, t}
+		var x = {
+			f,
+			s,
+			t
+		}

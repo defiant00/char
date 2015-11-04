@@ -658,6 +658,20 @@ func (this *ExprList) AddExpr(e Expression) {
 	this.exprs = append(this.exprs, e)
 }
 
+type ArrayValueList struct {
+	Vals *ExprList
+}
+
+func (this *ArrayValueList) isExpr() {}
+
+func (this *ArrayValueList) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("array val list")
+	if this.Vals != nil {
+		this.Vals.Print(indent + 1)
+	}
+}
+
 type ReturnStmt struct {
 	Vals Expression
 }
@@ -863,4 +877,36 @@ func (this *Break) isStmt() {}
 func (this *Break) Print(indent int) {
 	printIndent(indent)
 	fmt.Println("break", this.Label)
+}
+
+type ArrayType struct {
+	Type Statement
+}
+
+func (this *ArrayType) isStmt() {}
+
+func (this *ArrayType) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(this)
+}
+
+func (this *ArrayType) String() string {
+	return fmt.Sprintf("[]%v", this.Type)
+}
+
+type ArrayCons struct {
+	Type Statement
+	Size Expression
+}
+
+func (this *ArrayCons) isExpr() {}
+
+func (this *ArrayCons) Print(indent int) {
+	printIndent(indent)
+	fmt.Println(this)
+	this.Size.Print(indent + 1)
+}
+
+func (this *ArrayCons) String() string {
+	return fmt.Sprintf("cons []%v", this.Type)
 }

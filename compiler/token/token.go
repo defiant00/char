@@ -21,7 +21,7 @@ func (t Type) IsAssign() bool {
 }
 
 func (t Type) IsType() bool {
-	return t == IDENTIFIER || t == FUNCTION
+	return t == IDENTIFIER || t == FUNCTION || t == ARRAY
 }
 
 func (t Type) IsInBlock() bool {
@@ -74,6 +74,7 @@ const (
 	RIGHT_PAREN                // ')'
 	LEFT_BRACKET               // '['
 	RIGHT_BRACKET              // ']'
+	ARRAY                      // '[]'
 	LEFT_CURLY                 // '{'
 	RIGHT_CURLY                // '}'
 	assign_start               //
@@ -150,6 +151,7 @@ var tStrings = map[Type]string{
 	RIGHT_PAREN:   ")",
 	LEFT_BRACKET:  "[",
 	RIGHT_BRACKET: "]",
+	ARRAY:         "[]",
 	LEFT_CURLY:    "{",
 	RIGHT_CURLY:   "}",
 	ASSIGN:        "=",
@@ -211,6 +213,7 @@ var Keywords = map[string]Type{
 	")":     RIGHT_PAREN,
 	"[":     LEFT_BRACKET,
 	"]":     RIGHT_BRACKET,
+	"[]":    ARRAY,
 	"{":     LEFT_CURLY,
 	"}":     RIGHT_CURLY,
 	"=":     ASSIGN,

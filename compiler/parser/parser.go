@@ -258,10 +258,21 @@ func (p *parser) parseTypeRedirect() ast.Statement {
 }
 
 func (p *parser) parseType() ast.Statement {
-	if p.peek().Type == token.IDENTIFIER {
+	switch p.peek().Type {
+	case token.IDENTIFIER:
 		return p.parseTypeIdent()
+	case token.ARRAY:
+		return p.parseArrayType()
+	case token.FUNCTION:
+		return p.parseFuncSigType()
+	default:
+		return p.errorStmt(true, "Invalid token in type identifier: %v", p.peek())
 	}
-	return p.parseFuncSigType()
+}
+
+func (p *parser) parseArrayType() ast.Statement {
+	p.next() // eat []
+	return &ast.ArrayType{Type: p.parseType()}
 }
 
 func (p *parser) parseFuncSigType() ast.Statement {
@@ -774,6 +785,10 @@ func (p *parser) parsePrimaryExpr() ast.Expression {
 	switch p.peek().Type {
 	case token.LEFT_PAREN:
 		lhs = p.parseParenExpr()
+	case token.LEFT_CURLY:
+		lhs = p.parseCurlyExpr()
+	case token.LEFT_BRACKET:
+		lhs = p.parseArrayCons()
 	case token.IDENTIFIER:
 		lhs = p.parseIdentExpr()
 	case token.IOTA:
@@ -813,6 +828,58 @@ func (p *parser) parsePrimaryExpr() ast.Expression {
 	}
 
 	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
+}
+
+func (p *parser) parseArrayCons() ast.Expression {
+	p.next() // eat [
+	size := p.parseExpr()
+	switch size.(type) {
+	case *ast.Error:
+		return size
+	}
+	if succ, toks := p.accept(token.RIGHT_BRACKET); !succ {
+		return p.errorExpr(true, "Invalid token in array constructor: %v", toks[len(toks)-1])
+	}
+	typ := p.parseType()
+	switch typ.(type) {
+	case *ast.Error:
+		return typ.(ast.Expression)
+	}
+	return &ast.ArrayCons{Type: typ, Size: size}
+}
+
+func (p *parser) parseCurlyExpr() ast.Expression {
+	p.next() // eat {
+	avl := &ast.ArrayValueList{}
+	switch p.peek().Type {
+	case token.RIGHT_CURLY: // do nothing
+	default:
+		if succ, _ := p.accept(token.EOL, token.INDENT); succ {
+			avl.Vals = &ast.ExprList{}
+		loop:
+			for {
+				e := p.parseExpr()
+				avl.Vals.AddExpr(e)
+				switch e.(type) {
+				case *ast.Error:
+					break loop
+				}
+				if succ, _ := p.accept(token.EOL, token.DEDENT, token.EOL); succ {
+					break loop
+				}
+				if succ, toks := p.accept(token.COMMA, token.EOL); !succ {
+					avl.Vals.AddExpr(p.errorExpr(true, "Invalid token in array value list: %v", toks[len(toks)-1]))
+					break loop
+				}
+			}
+		} else {
+			avl.Vals = p.parseExprList()
+		}
+	}
+	if succ, toks := p.accept(token.RIGHT_CURLY); !succ {
+		return p.errorExpr(true, "Invalid token in array value list: %v", toks[len(toks)-1])
+	}
+	return avl
 }
 
 func (p *parser) parseAccessorStmt(lhs ast.Expression) ast.Expression {
