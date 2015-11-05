@@ -15,7 +15,7 @@ type parser struct {
 	fmtTokens []token.Token // all tokens, used to format
 }
 
-func Parse(file string, build, format, printTokens bool) ast.General {
+func Parse(file string, build, format, printTokens bool) (ast.General, bool) {
 	fmt.Println("Parsing file", file)
 
 	dat, err := ioutil.ReadFile(file)
@@ -53,17 +53,17 @@ func Parse(file string, build, format, printTokens bool) ast.General {
 	if t.Type == token.ERROR {
 		return p.errorStmt(false, "\n\n%v\n", t)
 	}
-	return p.parseFile()
+	return p.parseFile(), false
 }
 
-func (p *parser) errorStmt(toNextLine bool, format string, args ...interface{}) ast.Statement {
+func (p *parser) errorStmt(toNextLine bool, format string, args ...interface{}) (ast.Statement, bool) {
 	p.toNextLine(toNextLine)
-	return &ast.Error{Val: fmt.Sprintf(format, args...)}
+	return &ast.Error{Val: fmt.Sprintf(format, args...)}, true
 }
 
-func (p *parser) errorExpr(toNextLine bool, format string, args ...interface{}) ast.Expression {
+func (p *parser) errorExpr(toNextLine bool, format string, args ...interface{}) (ast.Expression, bool) {
 	p.toNextLine(toNextLine)
-	return &ast.Error{Val: fmt.Sprintf(format, args...)}
+	return &ast.Error{Val: fmt.Sprintf(format, args...)}, true
 }
 
 func (p *parser) toNextLine(toNextLine bool) {
@@ -146,23 +146,29 @@ func (p *parser) parseFile() ast.General {
 		case token.EOF:
 			p.next()
 		case token.IDENTIFIER:
-			f.AddStmt(p.parseTopLevelIdent())
+			st, _ := p.parseTopLevelIdent()
+			f.AddStmt(st)
 		case token.FUNCTION:
-			f.AddStmt(p.parseTypeRedirect())
+			st, _ := p.parseTypeRedirect()
+			f.AddStmt(st)
 		case token.USE:
-			f.AddStmt(p.parseUse())
+			st, _ := p.parseUse()
+			f.AddStmt(st)
 		case token.INTERFACE:
-			f.AddStmt(p.parseInterface())
+			st, _ := p.parseInterface()
+			f.AddStmt(st)
 		case token.MIXIN:
-			f.AddStmt(p.parseMixin())
+			st, _ := p.parseMixin()
+			f.AddStmt(st)
 		default:
-			f.AddStmt(p.errorStmt(true, "Invalid token %v", p.peek()))
+			st, _ := p.errorStmt(true, "Invalid token %v", p.peek())
+			f.AddStmt(st)
 		}
 	}
 	return f
 }
 
-func (p *parser) parseInterface() ast.Statement {
+func (p *parser) parseInterface() (ast.Statement, bool) {
 	succ, toks := p.accept(token.INTERFACE, token.IDENTIFIER)
 	if !succ {
 		return p.errorStmt(true, "Invalid token in interface: %v", toks[len(toks)-1])
@@ -183,7 +189,8 @@ func (p *parser) parseInterface() ast.Statement {
 		}
 		fs := &ast.IntfFuncSig{Name: toks[0].Val}
 		for p.peek().Type != token.RIGHT_PAREN {
-			fs.AddParam(p.parseType())
+			st, _ := p.parseType()
+			fs.AddParam(st)
 			switch p.peek().Type {
 			case token.COMMA:
 				p.next() // eat ,
@@ -195,7 +202,7 @@ func (p *parser) parseInterface() ast.Statement {
 		p.next() // eat )
 
 		// return value(s)
-		rvs := p.parseReturnValues()
+		rvs, _ := p.parseReturnValues()
 		for _, rv := range rvs {
 			fs.AddReturn(rv)
 		}
@@ -210,10 +217,10 @@ func (p *parser) parseInterface() ast.Statement {
 		return p.errorStmt(true, "Invalid token in interface %v: %v", name, toks[len(toks)-1])
 	}
 
-	return intf
+	return intf, false
 }
 
-func (p *parser) parseTopLevelIdent() ast.Statement {
+func (p *parser) parseTopLevelIdent() (ast.Statement, bool) {
 	if p.isTypeRedirect() {
 		return p.parseTypeRedirect()
 	}
@@ -237,13 +244,14 @@ func (p *parser) isTypeRedirect() bool {
 	return false
 }
 
-func (p *parser) parseMixin() ast.Statement {
+func (p *parser) parseMixin() (ast.Statement, bool) {
 	p.next() // eat mix
 	return p.parseClass(true)
 }
 
-func (p *parser) parseTypeRedirect() ast.Statement {
-	t := &ast.TypeRedirect{Type: p.parseType()}
+func (p *parser) parseTypeRedirect() (ast.Statement, bool) {
+	st, _ := p.parseType()
+	t := &ast.TypeRedirect{Type: st}
 
 	if succ, toks := p.accept(token.AS); !succ {
 		return p.errorStmt(true, "Invalid token in type redirect: %v", toks[len(toks)-1])
@@ -254,10 +262,10 @@ func (p *parser) parseTypeRedirect() ast.Statement {
 		return p.errorStmt(true, "Invalid token in type redirect: %v", toks[len(toks)-1])
 	}
 	t.Name = toks[0].Val
-	return t
+	return t, false
 }
 
-func (p *parser) parseType() ast.Statement {
+func (p *parser) parseType() (ast.Statement, bool) {
 	switch p.peek().Type {
 	case token.IDENTIFIER:
 		return p.parseTypeIdent()
@@ -270,12 +278,13 @@ func (p *parser) parseType() ast.Statement {
 	}
 }
 
-func (p *parser) parseArrayType() ast.Statement {
+func (p *parser) parseArrayType() (ast.Statement, bool) {
 	p.next() // eat []
-	return &ast.ArrayType{Type: p.parseType()}
+	st, _ := p.parseType()
+	return &ast.ArrayType{Type: st}, false
 }
 
-func (p *parser) parseFuncSigType() ast.Statement {
+func (p *parser) parseFuncSigType() (ast.Statement, bool) {
 	f := &ast.FuncSigType{}
 
 	// fn(types)
@@ -283,7 +292,8 @@ func (p *parser) parseFuncSigType() ast.Statement {
 		return p.errorStmt(true, "Invalid token in anonymous function: %v", toks[len(toks)-1])
 	}
 	for p.peek().Type != token.RIGHT_PAREN {
-		f.AddParam(p.parseType())
+		st, _ := p.parseType()
+		f.AddParam(st)
 		switch p.peek().Type {
 		case token.COMMA:
 			p.next() // eat ,
@@ -295,15 +305,15 @@ func (p *parser) parseFuncSigType() ast.Statement {
 	p.next() // eat )
 
 	// return value(s)
-	rvs := p.parseReturnValues()
+	rvs, _ := p.parseReturnValues()
 	for _, rv := range rvs {
 		f.AddReturn(rv)
 	}
 
-	return f
+	return f, false
 }
 
-func (p *parser) parseClass(mixin bool) ast.Statement {
+func (p *parser) parseClass(mixin bool) (ast.Statement, bool) {
 	succ, toks := p.accept(token.IDENTIFIER)
 	if !succ {
 		return p.errorStmt(true, "Invalid token in class declaration: %v", toks[len(toks)-1])
@@ -332,7 +342,8 @@ func (p *parser) parseClass(mixin bool) ast.Statement {
 		if p.peek().Type != token.IDENTIFIER {
 			return p.errorStmt(true, "Invalid token in class %v with declaration: %v", c.Name, p.peek())
 		}
-		c.AddWith(p.parseTypeIdent())
+		st, _ := p.parseTypeIdent()
+		c.AddWith(st)
 
 		for {
 			if succ, _ = p.accept(token.COMMA); !succ {
@@ -341,7 +352,8 @@ func (p *parser) parseClass(mixin bool) ast.Statement {
 			if p.peek().Type != token.IDENTIFIER {
 				return p.errorStmt(true, "Invalid token in class %v with declaration: %v", c.Name, p.peek())
 			}
-			c.AddWith(p.parseTypeIdent())
+			st, _ := p.parseTypeIdent()
+			c.AddWith(st)
 		}
 	}
 
@@ -350,17 +362,19 @@ func (p *parser) parseClass(mixin bool) ast.Statement {
 	}
 
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		c.AddStmt(p.parseClassStmt())
+		st, _ := p.parseClassStmt()
+		c.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		c.AddStmt(p.errorStmt(true, "Invalid token in class %v declaration: %v", c.Name, toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in class %v declaration: %v", c.Name, toks[len(toks)-1])
+		c.AddStmt(st)
 	}
 
-	return c
+	return c, false
 }
 
-func (p *parser) parseClassStmt() ast.Statement {
+func (p *parser) parseClassStmt() (ast.Statement, bool) {
 	switch p.peek().Type {
 	case token.DOT, token.IDENTIFIER:
 		return p.parseClassStmtIdent()
@@ -370,7 +384,7 @@ func (p *parser) parseClassStmt() ast.Statement {
 	return p.errorStmt(true, "Invalid token in class statement: %v", p.peek())
 }
 
-func (p *parser) parseFuncStmt() ast.Statement {
+func (p *parser) parseFuncStmt() (ast.Statement, bool) {
 	switch p.peek().Type {
 	case token.VAR:
 		return p.parseVarStmt(false)
@@ -392,7 +406,7 @@ func (p *parser) parseFuncStmt() ast.Statement {
 	}
 }
 
-func (p *parser) parseBreakStmt() ast.Statement {
+func (p *parser) parseBreakStmt() (ast.Statement, bool) {
 	p.next() // eat break
 	b := &ast.Break{}
 	if succ, toks := p.accept(token.IDENTIFIER); succ {
@@ -401,10 +415,10 @@ func (p *parser) parseBreakStmt() ast.Statement {
 	if succ, toks := p.accept(token.EOL); !succ {
 		return p.errorStmt(true, "Invalid token in break: %v", toks[len(toks)-1])
 	}
-	return b
+	return b, false
 }
 
-func (p *parser) parseForOrLoop(label string) ast.Statement {
+func (p *parser) parseForOrLoop(label string) (ast.Statement, bool) {
 	switch p.peek().Type {
 	case token.FOR:
 		return p.parseForStmt(label)
@@ -415,7 +429,7 @@ func (p *parser) parseForOrLoop(label string) ast.Statement {
 	}
 }
 
-func (p *parser) parseForStmt(label string) ast.Statement {
+func (p *parser) parseForStmt(label string) (ast.Statement, bool) {
 	p.next() // eat for
 
 	f := &ast.For{Label: label}
@@ -434,45 +448,49 @@ func (p *parser) parseForStmt(label string) ast.Statement {
 		return p.errorStmt(true, "Invalid token in for: %v", toks[len(toks)-1])
 	}
 
-	f.In = p.parseExpr()
-	switch f.In.(type) {
-	case *ast.Error:
-		return f.In.(ast.Statement)
+	in, err := p.parseExpr()
+	if err {
+		return in.(ast.Statement), true
 	}
+	f.In = in
 
 	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
 		return p.errorStmt(true, "Invalid token in for: %v", toks[len(toks)-1])
 	}
 
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		f.AddStmt(p.parseFuncStmt())
+		st, _ := p.parseFuncStmt()
+		f.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		f.AddStmt(p.errorStmt(true, "Invalid token in for: %v", toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in for: %v", toks[len(toks)-1])
+		f.AddStmt(st)
 	}
 
-	return f
+	return f, false
 }
 
-func (p *parser) parseLoopStmt(label string) ast.Statement {
+func (p *parser) parseLoopStmt(label string) (ast.Statement, bool) {
 	if succ, toks := p.accept(token.LOOP, token.EOL, token.INDENT); !succ {
 		return p.errorStmt(true, "Invalid token in loop: %v", toks[len(toks)-1])
 	}
 
 	l := &ast.Loop{Label: label}
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		l.AddStmt(p.parseFuncStmt())
+		st, _ := p.parseFuncStmt()
+		l.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		l.AddStmt(p.errorStmt(true, "Invalid token in loop: %v", toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in loop: %v", toks[len(toks)-1])
+		l.AddStmt(st)
 	}
 
-	return l
+	return l, false
 }
 
-func (p *parser) parseIfInnerStmt() ast.Statement {
+func (p *parser) parseIfInnerStmt() (ast.Statement, bool) {
 	switch p.peek().Type {
 	case token.IS:
 		return p.parseIsStmt()
@@ -481,42 +499,44 @@ func (p *parser) parseIfInnerStmt() ast.Statement {
 	}
 }
 
-func (p *parser) parseIsStmt() ast.Statement {
+func (p *parser) parseIsStmt() (ast.Statement, bool) {
 	p.next() // eat is
-	cond := p.parseExprList()
+	cond, _ := p.parseExprList()
 	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
 		return p.errorStmt(true, "Invalid token in is statement: %v", toks[len(toks)-1])
 	}
 
 	iss := &ast.Is{Condition: cond}
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		iss.AddStmt(p.parseFuncStmt())
+		st, _ := p.parseFuncStmt()
+		iss.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		iss.AddStmt(p.errorStmt(true, "Invalid token in is statement: %v", toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in is statement: %v", toks[len(toks)-1])
+		iss.AddStmt(st)
 	}
 
-	return iss
+	return iss, false
 }
 
-func (p *parser) parseIfStmt() ast.Statement {
+func (p *parser) parseIfStmt() (ast.Statement, bool) {
 	p.next() // eat if
 	var cond ast.Expression
+	var err bool
 	if p.peek().Type != token.EOL && p.peek().Type != token.WITH {
-		cond = p.parseExpr()
-		switch cond.(type) {
-		case *ast.Error:
-			return cond.(ast.Statement)
+		cond, err = p.parseExpr()
+		if err {
+			return cond.(ast.Statement), true
 		}
 	}
 	var with ast.Statement
 	if succ, _ := p.accept(token.WITH); succ {
 		switch p.peek().Type {
 		case token.VAR:
-			with = p.parseVarStmt(true)
+			with, _ = p.parseVarStmt(true)
 		default:
-			with = p.parseExprStmt(true)
+			with, _ = p.parseExprStmt(true)
 		}
 	}
 	if succ, toks := p.accept(token.EOL, token.INDENT); !succ {
@@ -525,18 +545,20 @@ func (p *parser) parseIfStmt() ast.Statement {
 
 	ifs := &ast.If{Condition: cond, With: with}
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		ifs.AddStmt(p.parseIfInnerStmt())
+		st, _ := p.parseIfInnerStmt()
+		ifs.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		ifs.AddStmt(p.errorStmt(true, "Invalid token in if statement: %v", toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in if statement: %v", toks[len(toks)-1])
+		ifs.AddStmt(st)
 	}
 
-	return ifs
+	return ifs, false
 }
 
-func (p *parser) parseExprStmt(inWith bool) ast.Statement {
-	ex := p.parseExprList()
+func (p *parser) parseExprStmt(inWith bool) (ast.Statement, bool) {
+	ex, _ := p.parseExprList()
 	var assign ast.Statement
 	if p.peek().Type.IsAssign() {
 		assign = p.parseAssignStmt(ex)
@@ -547,56 +569,55 @@ func (p *parser) parseExprStmt(inWith bool) ast.Statement {
 		}
 	}
 	if assign != nil {
-		return assign
+		return assign, false
 	}
-	return &ast.ExprStmt{Expr: ex}
+	return &ast.ExprStmt{Expr: ex}, false
 }
 
 func (p *parser) parseAssignStmt(lhs ast.Expression) ast.Statement {
 	op := p.next().Type
-	rhs := p.parseExprList()
+	rhs, _ := p.parseExprList()
 	return &ast.AssignStmt{Op: op, Left: lhs, Right: rhs}
 }
 
-func (p *parser) parseReturnStmt() ast.Statement {
+func (p *parser) parseReturnStmt() (ast.Statement, bool) {
 	p.next() // eat ret
 	r := &ast.ReturnStmt{}
 	if p.peek().Type != token.EOL {
-		r.Vals = p.parseExprList()
+		r.Vals, _ = p.parseExprList()
 	}
 	if succ, toks := p.accept(token.EOL); !succ {
-		r.Vals = p.errorExpr(true, "Invalid token in return statement: %v", toks[len(toks)-1])
+		r.Vals, _ = p.errorExpr(true, "Invalid token in return statement: %v", toks[len(toks)-1])
 	}
-	return r
+	return r, false
 }
 
-func (p *parser) parseDeferStmt() ast.Statement {
+func (p *parser) parseDeferStmt() (ast.Statement, bool) {
 	p.next() // eat defer
-	d := &ast.DeferStmt{Expr: p.parseExpr()}
+	ex, _ := p.parseExpr()
+	d := &ast.DeferStmt{Expr: ex}
 	if succ, toks := p.accept(token.EOL); !succ {
-		d.Expr = p.errorExpr(true, "Invalid token in defer statement: %v", toks[len(toks)-1])
+		d.Expr, _ = p.errorExpr(true, "Invalid token in defer statement: %v", toks[len(toks)-1])
 	}
-	return d
+	return d, false
 }
 
-func (p *parser) parseVarStmt(inWith bool) ast.Statement {
+func (p *parser) parseVarStmt(inWith bool) (ast.Statement, bool) {
 	p.next() // eat var
 	vs := &ast.VarSet{}
 
-	vsl := p.parseVarLineStmt(inWith)
-	switch vsl.(type) {
-	case *ast.Error:
-		return vsl
+	vsl, err := p.parseVarLineStmt(inWith)
+	if err {
+		return vsl, true
 	}
 	vs.AddLine(vsl.(*ast.VarSetLine))
 
 	if !inWith {
 		if succ, _ := p.accept(token.INDENT); succ {
 			for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-				vsl = p.parseVarLineStmt(inWith)
-				switch vsl.(type) {
-				case *ast.Error:
-					return vsl
+				vsl, err = p.parseVarLineStmt(inWith)
+				if err {
+					return vsl, true
 				}
 				vs.AddLine(vsl.(*ast.VarSetLine))
 			}
@@ -607,10 +628,10 @@ func (p *parser) parseVarStmt(inWith bool) ast.Statement {
 		}
 	}
 
-	return vs
+	return vs, false
 }
 
-func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
+func (p *parser) parseVarLineStmt(inWith bool) (ast.Statement, bool) {
 	v := &ast.VarSetLine{}
 	for {
 		if p.peek().Type != token.IDENTIFIER && p.peek().Type != token.BLANK {
@@ -620,7 +641,7 @@ func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
 
 		var typ ast.Statement
 		if p.peek().Type.IsType() {
-			typ = p.parseType()
+			typ, _ = p.parseType()
 		}
 
 		v.AddVar(name, typ)
@@ -630,7 +651,7 @@ func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
 	}
 
 	if succ, _ := p.accept(token.ASSIGN); succ {
-		v.Vals = p.parseExprList()
+		v.Vals, _ = p.parseExprList()
 	}
 
 	if !inWith {
@@ -638,27 +659,70 @@ func (p *parser) parseVarLineStmt(inWith bool) ast.Statement {
 			return p.errorStmt(true, "Invalid token in var statement: %v", toks[len(toks)-1])
 		}
 	}
-	return v
+	return v, false
 }
 
-func (p *parser) parseExprList() *ast.ExprList {
+func (p *parser) parseExprList() (ast.Expression, bool) {
 	el := &ast.ExprList{}
 loop:
 	for {
-		e := p.parseExpr()
+		e, err := p.parseExpr()
 		el.AddExpr(e)
-		switch e.(type) {
-		case *ast.Error:
+		if err {
 			break loop
 		}
 		if succ, _ := p.accept(token.COMMA); !succ {
 			break loop
 		}
 	}
-	return el
+	return el, false
 }
 
-func (p *parser) parseClassStmtIdent() ast.Statement {
+func (p *parser) parseMLExprList(start, end token.Type) (ast.Expression, bool) {
+	el := &ast.ExprList{}
+	if succ, toks := p.accept(start); !succ {
+		ex, _ := p.errorExpr(true, "Invalid token in expression list: %v", toks[len(toks)-1])
+		el.AddExpr(ex)
+		return el, true
+	}
+	switch p.peek().Type {
+	case end: // do nothing
+	default:
+		if succ, _ := p.accept(token.EOL, token.INDENT); succ {
+		loop:
+			for {
+				e, err := p.parseExpr()
+				el.AddExpr(e)
+				if err {
+					break loop
+				}
+				if succ, _ := p.accept(token.EOL, token.DEDENT, token.EOL); succ {
+					break loop
+				}
+				if succ, toks := p.accept(token.COMMA); !succ {
+					ex, _ := p.errorExpr(true, "Invalid token in expression list: %v", toks[len(toks)-1])
+					el.AddExpr(ex)
+					break loop
+				}
+				p.accept(token.EOL) // eat EOL if it's there
+			}
+		} else {
+			ex, err := p.parseExprList()
+			if err {
+				el.AddExpr(ex)
+				return el, true
+			}
+			el = ex.(*ast.ExprList)
+		}
+	}
+	if succ, toks := p.accept(end); !succ {
+		ex, _ := p.errorExpr(true, "Invalid token in expression list: %v", toks[len(toks)-1])
+		el.AddExpr(ex)
+	}
+	return el, false
+}
+
+func (p *parser) parseClassStmtIdent() (ast.Statement, bool) {
 	ps := &ast.PropertySet{}
 
 	for {
@@ -674,7 +738,7 @@ func (p *parser) parseClassStmtIdent() ast.Statement {
 		case t == token.LEFT_PAREN:
 			return p.parseFuncDef(dotted, name)
 		case t.IsType():
-			typ = p.parseType()
+			typ, _ = p.parseType()
 		}
 
 		ps.AddProp(!dotted, name, typ)
@@ -684,48 +748,52 @@ func (p *parser) parseClassStmtIdent() ast.Statement {
 	}
 
 	if succ, _ := p.accept(token.ASSIGN); succ {
-		ps.Vals = p.parseExprList()
+		ps.Vals, _ = p.parseExprList()
 	}
 
 	if succ, toks := p.accept(token.EOL); !succ {
 		return p.errorStmt(true, "Invalid token in class statement: %v", toks[len(toks)-1])
 	}
 
-	return ps
+	return ps, false
 }
 
-func (p *parser) parseReturnValues() []ast.Statement {
+func (p *parser) parseReturnValues() ([]ast.Statement, bool) {
 	rvs := make([]ast.Statement, 0, 1)
 
 	switch t := p.peek().Type; {
 	case t.IsType():
-		rvs = append(rvs, p.parseType())
+		st, _ := p.parseType()
+		rvs = append(rvs, st)
 	case t == token.LEFT_PAREN:
 		p.next() // eat (
 		for p.peek().Type != token.RIGHT_PAREN {
-			rvs = append(rvs, p.parseType())
+			st, _ := p.parseType()
+			rvs = append(rvs, st)
 			switch p.peek().Type {
 			case token.COMMA:
 				p.next() // eat ,
 			case token.RIGHT_PAREN:
 			default:
-				return append(rvs, p.errorStmt(true, "Invalid token in return types: %v", p.peek()))
+				st, _ := p.errorStmt(true, "Invalid token in return types: %v", p.peek())
+				return append(rvs, st), true
 			}
 		}
 		p.next() // eat )
 	}
 
-	return rvs
+	return rvs, false
 }
 
-func (p *parser) parseAnonFuncExpr() ast.Expression {
+func (p *parser) parseAnonFuncExpr() (ast.Expression, bool) {
 	p.next() // eat fn
-	return p.parseFuncDef(true, "").(ast.Expression)
+	st, err := p.parseFuncDef(true, "")
+	return st.(ast.Expression), err
 }
 
 // parseFuncDef parses a function definition with the optional dot and name
 // already consumed.
-func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
+func (p *parser) parseFuncDef(dotted bool, name string) (ast.Statement, bool) {
 	if succ, toks := p.accept(token.LEFT_PAREN); !succ {
 		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
 	}
@@ -738,7 +806,7 @@ func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
 		name := toks[0].Val
 		var typ ast.Statement
 		if p.peek().Type.IsType() {
-			typ = p.parseType()
+			typ, _ = p.parseType()
 		}
 		f.AddParam(name, typ)
 		switch p.peek().Type {
@@ -754,7 +822,7 @@ func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
 	}
 
 	// return value(s)
-	rvs := p.parseReturnValues()
+	rvs, _ := p.parseReturnValues()
 	for _, rv := range rvs {
 		f.AddReturn(rv)
 	}
@@ -764,11 +832,13 @@ func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
 	}
 
 	for p.peek().Type != token.DEDENT && p.peek().Type != token.EOF {
-		f.AddStmt(p.parseFuncStmt())
+		st, _ := p.parseFuncStmt()
+		f.AddStmt(st)
 	}
 
 	if succ, toks := p.accept(token.DEDENT, token.EOL); !succ {
-		f.AddStmt(p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1]))
+		st, _ := p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
+		f.AddStmt(st)
 	}
 
 	// If it's an anonymous function and we're not in the middle of a block
@@ -777,37 +847,37 @@ func (p *parser) parseFuncDef(dotted bool, name string) ast.Statement {
 		p.backup(1)
 	}
 
-	return f
+	return f, false
 }
 
-func (p *parser) parsePrimaryExpr() ast.Expression {
+func (p *parser) parsePrimaryExpr() (ast.Expression, bool) {
 	var lhs ast.Expression
 	switch p.peek().Type {
 	case token.LEFT_PAREN:
-		lhs = p.parseParenExpr()
+		lhs, _ = p.parseParenExpr()
 	case token.LEFT_CURLY:
-		lhs = p.parseCurlyExpr()
+		lhs, _ = p.parseCurlyExpr()
 	case token.LEFT_BRACKET:
-		lhs = p.parseArrayCons()
+		lhs, _ = p.parseArrayCons()
 	case token.IDENTIFIER:
-		lhs = p.parseIdentExpr()
+		lhs, _ = p.parseIdentExpr()
 	case token.IOTA:
-		lhs = p.parseIotaExpr()
+		lhs, _ = p.parseIotaExpr()
 	case token.BLANK:
-		lhs = p.parseBlankExpr()
+		lhs, _ = p.parseBlankExpr()
 	case token.STRING:
-		lhs = p.parseStringExpr()
+		lhs, _ = p.parseStringExpr()
 	case token.NUMBER:
-		lhs = p.parseNumberExpr()
+		lhs, _ = p.parseNumberExpr()
 	case token.CHAR:
-		lhs = p.parseCharExpr()
+		lhs, _ = p.parseCharExpr()
 	case token.TRUE, token.FALSE:
-		lhs = p.parseBoolExpr()
+		lhs, _ = p.parseBoolExpr()
 	case token.FUNCTION:
-		lhs = p.parseAnonFuncExpr()
+		lhs, _ = p.parseAnonFuncExpr()
 	default:
 		if p.peek().Type.IsUnaryOp() {
-			lhs = p.parseUnaryExpr()
+			lhs, _ = p.parseUnaryExpr()
 		}
 	}
 
@@ -817,93 +887,60 @@ func (p *parser) parsePrimaryExpr() ast.Expression {
 		for {
 			switch p.peek().Type {
 			case token.LEFT_BRACKET:
-				lhs = p.parseAccessorStmt(lhs)
+				lhs, _ = p.parseAccessorStmt(lhs)
 			case token.LEFT_PAREN:
-				lhs = p.parseFuncCallStmt(lhs)
+				lhs, _ = p.parseFuncCallStmt(lhs)
 			default:
 				break loop
 			}
 		}
-		return lhs
+		return lhs, false
 	}
 
 	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
 }
 
-func (p *parser) parseArrayCons() ast.Expression {
+func (p *parser) parseArrayCons() (ast.Expression, bool) {
 	p.next() // eat [
-	size := p.parseExpr()
-	switch size.(type) {
-	case *ast.Error:
-		return size
+	size, err := p.parseExpr()
+	if err {
+		return size, true
 	}
 	if succ, toks := p.accept(token.RIGHT_BRACKET); !succ {
 		return p.errorExpr(true, "Invalid token in array constructor: %v", toks[len(toks)-1])
 	}
-	typ := p.parseType()
-	switch typ.(type) {
-	case *ast.Error:
-		return typ.(ast.Expression)
+	typ, err := p.parseType()
+	if err {
+		return typ.(ast.Expression), true
 	}
-	return &ast.ArrayCons{Type: typ, Size: size}
+	return &ast.ArrayCons{Type: typ, Size: size}, false
 }
 
-func (p *parser) parseCurlyExpr() ast.Expression {
-	p.next() // eat {
-	avl := &ast.ArrayValueList{}
-	switch p.peek().Type {
-	case token.RIGHT_CURLY: // do nothing
-	default:
-		if succ, _ := p.accept(token.EOL, token.INDENT); succ {
-			avl.Vals = &ast.ExprList{}
-		loop:
-			for {
-				e := p.parseExpr()
-				avl.Vals.AddExpr(e)
-				switch e.(type) {
-				case *ast.Error:
-					break loop
-				}
-				if succ, _ := p.accept(token.EOL, token.DEDENT, token.EOL); succ {
-					break loop
-				}
-				if succ, toks := p.accept(token.COMMA); !succ {
-					avl.Vals.AddExpr(p.errorExpr(true, "Invalid token in array value list: %v", toks[len(toks)-1]))
-					break loop
-				}
-				p.accept(token.EOL) // eat EOL if it's there
-			}
-		} else {
-			avl.Vals = p.parseExprList()
-		}
-	}
-	if succ, toks := p.accept(token.RIGHT_CURLY); !succ {
-		return p.errorExpr(true, "Invalid token in array value list: %v", toks[len(toks)-1])
-	}
-	return avl
+func (p *parser) parseCurlyExpr() (ast.Expression, bool) {
+	ex, err := p.parseMLExprList(token.LEFT_CURLY, token.RIGHT_CURLY)
+	return &ast.ArrayValueList{Vals: ex}, err
 }
 
-func (p *parser) parseAccessorStmt(lhs ast.Expression) ast.Expression {
+func (p *parser) parseAccessorStmt(lhs ast.Expression) (ast.Expression, bool) {
 	p.next() // eat [
 
 	var low, high ast.Expression
+	var err bool
 	isRange := false
 
 	if p.peek().Type != token.COLON {
-		low = p.parseExpr()
-		switch low.(type) {
-		case *ast.Error:
-			return low
+		low, err = p.parseExpr()
+		if err {
+			return low, true
 		}
 	}
 
 	if succ, _ := p.accept(token.COLON); succ {
 		isRange = true
 		if p.peek().Type != token.RIGHT_BRACKET {
-			high = p.parseExpr()
-			switch high.(type) {
-			case *ast.Error:
-				return high
+			high, err = p.parseExpr()
+			if err {
+				return high, true
 			}
 		}
 	}
@@ -913,38 +950,33 @@ func (p *parser) parseAccessorStmt(lhs ast.Expression) ast.Expression {
 	}
 
 	if isRange {
-		return &ast.AccessorRangeExpr{Object: lhs, Low: low, High: high}
+		return &ast.AccessorRangeExpr{Object: lhs, Low: low, High: high}, false
 	}
-	return &ast.AccessorExpr{Object: lhs, Index: low}
+	return &ast.AccessorExpr{Object: lhs, Index: low}, false
 }
 
-func (p *parser) parseFuncCallStmt(lhs ast.Expression) ast.Expression {
-	p.next() // eat (
+func (p *parser) parseFuncCallStmt(lhs ast.Expression) (ast.Expression, bool) {
 	fc := &ast.FuncCallExpr{Function: lhs}
-	if p.peek().Type != token.RIGHT_PAREN {
-		fc.Params = p.parseExprList()
-	}
-	if succ, toks := p.accept(token.RIGHT_PAREN); !succ {
-		return p.errorExpr(true, "Invalid token in function call: %v", toks[len(toks)-1])
-	}
-	return fc
+	fc.Params, _ = p.parseMLExprList(token.LEFT_PAREN, token.RIGHT_PAREN)
+	return fc, false
 }
 
-func (p *parser) parseUnaryExpr() ast.Expression {
+func (p *parser) parseUnaryExpr() (ast.Expression, bool) {
 	op := p.next().Type
-	return &ast.UnaryExpr{Expr: p.parsePrimaryExpr(), Op: op}
+	ex, _ := p.parsePrimaryExpr()
+	return &ast.UnaryExpr{Expr: ex, Op: op}, false
 }
 
-func (p *parser) parseParenExpr() ast.Expression {
+func (p *parser) parseParenExpr() (ast.Expression, bool) {
 	p.next() // eat (
-	expr := p.parseExpr()
+	expr, _ := p.parseExpr()
 	if succ, toks := p.accept(token.RIGHT_PAREN); !succ {
 		return p.errorExpr(true, "Invalid token in (): %v", toks[len(toks)-1])
 	}
-	return expr
+	return expr, false
 }
 
-func (p *parser) parseIdentExpr() ast.Expression {
+func (p *parser) parseIdentExpr() (ast.Expression, bool) {
 	ie := &ast.IdentExpr{}
 	for {
 		succ, toks := p.accept(token.IDENTIFIER)
@@ -955,7 +987,8 @@ func (p *parser) parseIdentExpr() ast.Expression {
 		if succ, _ := p.accept(token.LEFT_CARET); succ {
 			resetPos := p.pos - 1 // store the position in case the caret isn't a generic
 			for p.peek().Type.IsType() {
-				ip.AddTypeParam(p.parseType())
+				st, _ := p.parseType()
+				ip.AddTypeParam(st)
 				if succ, _ = p.accept(token.COMMA); !succ {
 					break
 				}
@@ -970,70 +1003,67 @@ func (p *parser) parseIdentExpr() ast.Expression {
 			break
 		}
 	}
-	return ie
+	return ie, false
 }
 
-func (p *parser) parseBoolExpr() ast.Expression {
-	return &ast.BoolExpr{Val: p.next().Type == token.TRUE}
+func (p *parser) parseBoolExpr() (ast.Expression, bool) {
+	return &ast.BoolExpr{Val: p.next().Type == token.TRUE}, false
 }
 
-func (p *parser) parseCharExpr() ast.Expression {
-	return &ast.CharExpr{Val: p.next().Val}
+func (p *parser) parseCharExpr() (ast.Expression, bool) {
+	return &ast.CharExpr{Val: p.next().Val}, false
 }
 
-func (p *parser) parseNumberExpr() ast.Expression {
-	return &ast.NumberExpr{Val: p.next().Val}
+func (p *parser) parseNumberExpr() (ast.Expression, bool) {
+	return &ast.NumberExpr{Val: p.next().Val}, false
 }
 
-func (p *parser) parseIotaExpr() ast.Expression {
+func (p *parser) parseIotaExpr() (ast.Expression, bool) {
 	p.next() // eat iota
-	return &ast.IotaExpr{}
+	return &ast.IotaExpr{}, false
 }
 
-func (p *parser) parseBlankExpr() ast.Expression {
+func (p *parser) parseBlankExpr() (ast.Expression, bool) {
 	p.next() // eat _
-	return &ast.BlankExpr{}
+	return &ast.BlankExpr{}, false
 }
 
-func (p *parser) parseStringExpr() ast.Expression {
-	return &ast.StringExpr{Val: p.next().Val}
+func (p *parser) parseStringExpr() (ast.Expression, bool) {
+	return &ast.StringExpr{Val: p.next().Val}, false
 }
 
-func (p *parser) parseExpr() ast.Expression {
-	lhs := p.parsePrimaryExpr()
-	switch lhs.(type) {
-	case *ast.Error:
-		return lhs
+func (p *parser) parseExpr() (ast.Expression, bool) {
+	lhs, err := p.parsePrimaryExpr()
+	if err {
+		return lhs, true
 	}
 	return p.parseBinopRHS(0, lhs)
 }
 
-func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression {
+func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) (ast.Expression, bool) {
 	for {
 		tokPrec := p.peekCombo().Precedence()
 
 		// If this is a binary operator that binds as tightly as the
 		// current one, consume it. Otherwise we're done.
 		if tokPrec < exprPrec {
-			return lhs
+			return lhs, false
 		}
 
 		op := p.nextCombo()
 
-		rhs := p.parsePrimaryExpr()
-		switch rhs.(type) {
-		case *ast.Error:
-			return rhs // An error, so rhs should hold the error message
+		rhs, err := p.parsePrimaryExpr()
+		if err {
+			return rhs, true // An error, so rhs should hold the error message
 		}
 
 		// If binop binds less tightly with RHS than the operator after RHS,
 		// let the pending op take RHS as its LHS.
 		nextPrec := p.peekCombo().Precedence()
 		if tokPrec < nextPrec {
-			rhs = p.parseBinopRHS(tokPrec+1, rhs)
-			switch rhs.(type) {
-			case *ast.Error:
-				return rhs // An error, so rhs should hold the error message
+			rhs, err = p.parseBinopRHS(tokPrec+1, rhs)
+			if err {
+				return rhs, true // An error, so rhs should hold the error message
 			}
 		}
 
@@ -1042,14 +1072,14 @@ func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) ast.Expression 
 	}
 }
 
-func (p *parser) parseIotaStmt() ast.Statement {
+func (p *parser) parseIotaStmt() (ast.Statement, bool) {
 	if succ, toks := p.accept(token.IOTA, token.EOL); !succ {
 		return p.errorStmt(true, "Invalid token in iota reset: %v", toks[len(toks)-1])
 	}
-	return &ast.IotaStmt{}
+	return &ast.IotaStmt{}, false
 }
 
-func (p *parser) parseTypeIdent() ast.Statement {
+func (p *parser) parseTypeIdent() (ast.Statement, bool) {
 	t := &ast.TypeIdent{}
 	t.AddIdent(p.next().Val)
 	for {
@@ -1061,7 +1091,8 @@ func (p *parser) parseTypeIdent() ast.Statement {
 	}
 	if succ, _ := p.accept(token.LEFT_CARET); succ {
 		for p.peek().Type.IsType() {
-			t.AddTypeParam(p.parseType())
+			st, _ := p.parseType()
+			t.AddTypeParam(st)
 			if succ, _ = p.accept(token.COMMA); !succ {
 				break
 			}
@@ -1070,10 +1101,10 @@ func (p *parser) parseTypeIdent() ast.Statement {
 			return p.errorStmt(true, "Invalid token parsing type identifier: %v", toks[len(toks)-1])
 		}
 	}
-	return t
+	return t, false
 }
 
-func (p *parser) parseUse() ast.Statement {
+func (p *parser) parseUse() (ast.Statement, bool) {
 	p.next() // eat token.USE
 	u := &ast.Use{}
 
@@ -1090,12 +1121,12 @@ func (p *parser) parseUse() ast.Statement {
 			err, pack, alias, errTok = p.parseUsePackage()
 		}
 		if succ, _ = p.accept(token.DEDENT, token.EOL); succ {
-			return u
+			return u, false
 		}
 		return p.errorStmt(true, "Invalid token found when parsing Use: %v", errTok)
 	}
 
-	return u
+	return u, false
 }
 
 func (p *parser) parseUsePackage() (bool, string, string, token.Token) {

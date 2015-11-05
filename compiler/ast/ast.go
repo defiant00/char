@@ -416,7 +416,7 @@ func (this *IdentExpr) AddIdent(i *IdentPart) {
 
 type FuncCallExpr struct {
 	Function Expression
-	Params   *ExprList
+	Params   Expression
 }
 
 func (this *FuncCallExpr) isExpr() {}
@@ -604,7 +604,7 @@ func (this *VarSet) AddLine(vsl *VarSetLine) {
 
 type VarSetLine struct {
 	vars []variable
-	Vals *ExprList
+	Vals Expression
 }
 
 func (this *VarSetLine) isStmt() {}
@@ -659,7 +659,7 @@ func (this *ExprList) AddExpr(e Expression) {
 }
 
 type ArrayValueList struct {
-	Vals *ExprList
+	Vals Expression
 }
 
 func (this *ArrayValueList) isExpr() {}
