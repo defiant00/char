@@ -700,6 +700,7 @@ func (this *DeferStmt) Print(indent int) {
 
 type InterfaceStmt struct {
 	Name     string
+	withs    []Statement
 	funcSigs []Statement
 }
 
@@ -707,10 +708,24 @@ func (this *InterfaceStmt) isStmt() {}
 
 func (this *InterfaceStmt) Print(indent int) {
 	printIndent(indent)
-	fmt.Println("interface", this.Name)
+	fmt.Print("interface ", this.Name)
+	if len(this.withs) > 0 {
+		fmt.Print(" with ")
+		for i, w := range this.withs {
+			if i > 0 {
+				fmt.Print(", ")
+			}
+			fmt.Print(w)
+		}
+	}
+	fmt.Println()
 	for _, f := range this.funcSigs {
 		f.Print(indent + 1)
 	}
+}
+
+func (this *InterfaceStmt) AddWith(w Statement) {
+	this.withs = append(this.withs, w)
 }
 
 func (this *InterfaceStmt) AddFuncSig(i Statement) {

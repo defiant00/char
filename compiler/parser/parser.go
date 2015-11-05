@@ -85,6 +85,10 @@ func (p *parser) toNextLine(toNextLine bool) {
 	}
 }
 
+func (p *parser) tokensAvailable() int {
+	return len(p.tokens) - p.pos
+}
+
 func (p *parser) peek() token.Token {
 	return p.tokens[p.pos]
 }
@@ -99,11 +103,14 @@ func (p *parser) next() token.Token {
 // into rshift.
 func (p *parser) peekCombo() token.Token {
 	t := p.next()
-	t2 := p.peek()
-	p.backup(1)
-	if t.Type == token.RIGHT_CARET && t2.Type == token.RIGHT_CARET {
-		return token.Token{Type: token.RSHIFT, Pos: t.Pos}
+	if p.tokensAvailable() > 0 {
+		t2 := p.peek()
+		if t.Type == token.RIGHT_CARET && t2.Type == token.RIGHT_CARET {
+			p.backup(1)
+			return token.Token{Type: token.RSHIFT, Pos: t.Pos}
+		}
 	}
+	p.backup(1)
 	return t
 }
 
@@ -174,18 +181,31 @@ func (p *parser) parseInterface() (ast.Statement, bool) {
 		return p.errorStmt(true, "Invalid token in interface: %v", toks[len(toks)-1])
 	}
 
-	name := toks[1].Val
-	intf := &ast.InterfaceStmt{Name: name}
+	intf := &ast.InterfaceStmt{Name: toks[1].Val}
+
+	if succ, _ := p.accept(token.WITH); succ {
+		for {
+			if p.peek().Type != token.IDENTIFIER {
+				return p.errorStmt(true, "Invalid token in interface %v: %v", intf.Name, p.peek())
+			}
+			st, _ := p.parseTypeIdent()
+			intf.AddWith(st)
+
+			if succ, _ = p.accept(token.COMMA); !succ {
+				break
+			}
+		}
+	}
 
 	if succ, toks = p.accept(token.EOL, token.INDENT); !succ {
-		return p.errorStmt(true, "Invalid token in interface %v: %v", name, toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in interface %v: %v", intf.Name, toks[len(toks)-1])
 	}
 
 	for p.peek().Type != token.DEDENT {
 		// function_name(types)
 		succ, toks = p.accept(token.IDENTIFIER, token.LEFT_PAREN)
 		if !succ {
-			return p.errorStmt(true, "Invalid token in interface %v: %v", name, toks[len(toks)-1])
+			return p.errorStmt(true, "Invalid token in interface %v: %v", intf.Name, toks[len(toks)-1])
 		}
 		fs := &ast.IntfFuncSig{Name: toks[0].Val}
 		for p.peek().Type != token.RIGHT_PAREN {
@@ -196,7 +216,7 @@ func (p *parser) parseInterface() (ast.Statement, bool) {
 				p.next() // eat ,
 			case token.RIGHT_PAREN:
 			default:
-				return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fs.Name, p.peek())
+				return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", intf.Name, fs.Name, p.peek())
 			}
 		}
 		p.next() // eat )
@@ -208,13 +228,13 @@ func (p *parser) parseInterface() (ast.Statement, bool) {
 		}
 
 		if succ, _ = p.accept(token.EOL); !succ {
-			return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", name, fs.Name, p.peek())
+			return p.errorStmt(true, "Invalid token in interface %v function signature %v: %v", intf.Name, fs.Name, p.peek())
 		}
 		intf.AddFuncSig(fs)
 	}
 
 	if succ, toks = p.accept(token.DEDENT, token.EOL); !succ {
-		return p.errorStmt(true, "Invalid token in interface %v: %v", name, toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in interface %v: %v", intf.Name, toks[len(toks)-1])
 	}
 
 	return intf, false
@@ -321,17 +341,15 @@ func (p *parser) parseClass(mixin bool) (ast.Statement, bool) {
 	c := &ast.Class{Mixin: mixin, Name: toks[0].Val}
 
 	if succ, _ := p.accept(token.LEFT_CARET); succ {
-		succ, toks := p.accept(token.IDENTIFIER)
-		if !succ {
-			return p.errorStmt(true, "Invalid token in class %v type declaration: %v", c.Name, toks[len(toks)-1])
-		}
-		c.AddTypeParam(toks[0].Val)
 		for {
-			succ, toks = p.accept(token.COMMA, token.IDENTIFIER)
+			succ, toks := p.accept(token.IDENTIFIER)
 			if !succ {
+				return p.errorStmt(true, "Invalid token in class %v type declaration: %v", c.Name, toks[len(toks)-1])
+			}
+			c.AddTypeParam(toks[0].Val)
+			if succ, _ := p.accept(token.COMMA); !succ {
 				break
 			}
-			c.AddTypeParam(toks[1].Val)
 		}
 		if succ, _ = p.accept(token.RIGHT_CARET); !succ {
 			return p.errorStmt(true, "Invalid token in class %v type declaration: %v", c.Name, toks[len(toks)-1])
@@ -339,21 +357,16 @@ func (p *parser) parseClass(mixin bool) (ast.Statement, bool) {
 	}
 
 	if succ, _ := p.accept(token.WITH); succ {
-		if p.peek().Type != token.IDENTIFIER {
-			return p.errorStmt(true, "Invalid token in class %v with declaration: %v", c.Name, p.peek())
-		}
-		st, _ := p.parseTypeIdent()
-		c.AddWith(st)
-
 		for {
-			if succ, _ = p.accept(token.COMMA); !succ {
-				break
-			}
 			if p.peek().Type != token.IDENTIFIER {
 				return p.errorStmt(true, "Invalid token in class %v with declaration: %v", c.Name, p.peek())
 			}
 			st, _ := p.parseTypeIdent()
 			c.AddWith(st)
+
+			if succ, _ = p.accept(token.COMMA); !succ {
+				break
+			}
 		}
 	}
 
