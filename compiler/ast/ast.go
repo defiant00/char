@@ -910,3 +910,38 @@ func (this *ArrayCons) Print(indent int) {
 func (this *ArrayCons) String() string {
 	return fmt.Sprintf("cons []%v", this.Type)
 }
+
+type Constructor struct {
+	Type   Expression
+	params []Statement
+}
+
+func (this *Constructor) isExpr() {}
+
+func (this *Constructor) Print(indent int) {
+	printIndent(indent)
+	fmt.Println("cons")
+	this.Type.Print(indent + 2)
+	printIndent(indent + 1)
+	fmt.Println("vals")
+	for _, p := range this.params {
+		p.Print(indent + 2)
+	}
+}
+
+func (this *Constructor) AddParam(p Statement) {
+	this.params = append(this.params, p)
+}
+
+type KeyVal struct {
+	Key string
+	Val Expression
+}
+
+func (this *KeyVal) isStmt() {}
+
+func (this *KeyVal) Print(indent int) {
+	printIndent(indent)
+	fmt.Printf("%v:\n", this.Key)
+	this.Val.Print(indent + 1)
+}

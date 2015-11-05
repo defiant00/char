@@ -882,12 +882,14 @@ func (p *parser) parsePrimaryExpr() (ast.Expression, bool) {
 	}
 
 	if lhs != nil {
-		// Function calls and accessors.
+		// Function calls, constructors and accessors.
 	loop:
 		for {
 			switch p.peek().Type {
 			case token.LEFT_BRACKET:
 				lhs, _ = p.parseAccessorStmt(lhs)
+			case token.LEFT_CURLY:
+				lhs, _ = p.parseConstructor(lhs)
 			case token.LEFT_PAREN:
 				lhs, _ = p.parseFuncCallStmt(lhs)
 			default:
@@ -898,6 +900,59 @@ func (p *parser) parsePrimaryExpr() (ast.Expression, bool) {
 	}
 
 	return p.errorExpr(true, "Token is not an expression: %v", p.peek())
+}
+
+func (p *parser) parseConstructor(lhs ast.Expression) (ast.Expression, bool) {
+	p.next() // eat {
+	con := &ast.Constructor{Type: lhs}
+	switch p.peek().Type {
+	case token.RIGHT_CURLY: // do nothing
+	default:
+		if succ, _ := p.accept(token.EOL, token.INDENT); succ {
+		l1:
+			for {
+				kv, err := p.parseKeyVal()
+				con.AddParam(kv)
+				if err {
+					break l1
+				}
+				if succ, _ := p.accept(token.EOL, token.DEDENT, token.EOL); succ {
+					break l1
+				}
+				if succ, toks := p.accept(token.COMMA); !succ {
+					return p.errorExpr(true, "Invalid token in constructor: %v", toks[len(toks)-1])
+				}
+				p.accept(token.EOL) // eat EOL if it's there
+			}
+		} else {
+		l2:
+			for {
+				kv, err := p.parseKeyVal()
+				con.AddParam(kv)
+				if err {
+					break l2
+				}
+				if succ, _ := p.accept(token.COMMA); !succ {
+					break l2
+				}
+			}
+		}
+	}
+	if succ, toks := p.accept(token.RIGHT_CURLY); !succ {
+		return p.errorExpr(true, "Invalid token in constructor: %v", toks[len(toks)-1])
+	}
+	return con, false
+}
+
+func (p *parser) parseKeyVal() (ast.Statement, bool) {
+	succ, toks := p.accept(token.IDENTIFIER, token.COLON)
+	if !succ {
+		return p.errorStmt(true, "Invalid token in key:value pair: %v", toks[len(toks)-1])
+	}
+	kv := &ast.KeyVal{Key: toks[0].Val}
+	ex, err := p.parseExpr()
+	kv.Val = ex
+	return kv, err
 }
 
 func (p *parser) parseArrayCons() (ast.Expression, bool) {

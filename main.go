@@ -1,15 +1,3 @@
-/*
-TODO
-
-Parsing:
-	constructor forms:
-		var a = myClass{first: "first", last: "last"}
-			a = myClass{
-					first: "first",
-					last:  "last"
-				}
-*/
-
 package main
 
 import (

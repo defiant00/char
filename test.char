@@ -1,4 +1,4 @@
 
 main
 	main()
-		_
+		var m = main{first: testClass{thing:1}, second: {1, 2, 3}}
