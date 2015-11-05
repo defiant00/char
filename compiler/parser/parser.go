@@ -867,10 +867,11 @@ func (p *parser) parseCurlyExpr() ast.Expression {
 				if succ, _ := p.accept(token.EOL, token.DEDENT, token.EOL); succ {
 					break loop
 				}
-				if succ, toks := p.accept(token.COMMA, token.EOL); !succ {
+				if succ, toks := p.accept(token.COMMA); !succ {
 					avl.Vals.AddExpr(p.errorExpr(true, "Invalid token in array value list: %v", toks[len(toks)-1]))
 					break loop
 				}
+				p.accept(token.EOL) // eat EOL if it's there
 			}
 		} else {
 			avl.Vals = p.parseExprList()

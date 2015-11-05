@@ -3,7 +3,32 @@ main
 	main()
 		var x = {f, s, t}
 		var x = {
-			f,
-			s,
-			t
+			fi, se,
+			th, fo
+		}
+		x = {1, 2}
+		x += {
+			1,
+			2
+		}
+		x, y, z = {1, 2}, {
+			11,
+			21
+		}, {
+			31, 41,
+			51
+		}
+		var x, y = {1, 2}, {3, 4}
+		doThing({f, s, t}, "hello")
+		doThing({
+			f, s,
+			th, fo
+		}, true)
+		var mda = {
+			{1, 2, 3},
+			{4, 5, 6},
+			{
+				7, 8,
+				9
+			}
 		}
