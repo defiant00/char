@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"github.com/defiant00/char/compiler/ast"
 	"github.com/defiant00/char/compiler/parser"
 	"os"
 	"path/filepath"
@@ -23,10 +24,10 @@ func Build(path string, build, format, printTokens, printAST bool) {
 
 	for _, file := range files {
 		if file.Mode().IsRegular() && filepath.Ext(file.Name()) == ".char" {
-			ast, _ := parser.Parse(filepath.Join(path, file.Name()), build, format, printTokens)
+			fAST, _ := parser.Parse(filepath.Join(path, file.Name()), build, format, printTokens)
 			if printAST {
 				fmt.Println("\n\nAST")
-				ast.Print(1)
+				ast.Print(fAST, 1)
 			}
 		}
 	}

@@ -181,7 +181,7 @@ func (p *parser) parseInterface() (ast.Statement, bool) {
 		return p.errorStmt(true, "Invalid token in interface: %v", toks[len(toks)-1])
 	}
 
-	intf := &ast.InterfaceStmt{Name: toks[1].Val}
+	intf := &ast.Interface{Name: toks[1].Val}
 
 	if succ, _ := p.accept(token.WITH); succ {
 		for {
@@ -301,11 +301,11 @@ func (p *parser) parseType() (ast.Statement, bool) {
 func (p *parser) parseArrayType() (ast.Statement, bool) {
 	p.next() // eat []
 	st, _ := p.parseType()
-	return &ast.ArrayType{Type: st}, false
+	return &ast.Array{Type: st}, false
 }
 
 func (p *parser) parseFuncSigType() (ast.Statement, bool) {
-	f := &ast.FuncSigType{}
+	f := &ast.FunctionSig{}
 
 	// fn(types)
 	if succ, toks := p.accept(token.FUNCTION, token.LEFT_PAREN); !succ {
@@ -590,12 +590,12 @@ func (p *parser) parseExprStmt(inWith bool) (ast.Statement, bool) {
 func (p *parser) parseAssignStmt(lhs ast.Expression) ast.Statement {
 	op := p.next().Type
 	rhs, _ := p.parseExprList()
-	return &ast.AssignStmt{Op: op, Left: lhs, Right: rhs}
+	return &ast.Assign{Op: op, Left: lhs, Right: rhs}
 }
 
 func (p *parser) parseReturnStmt() (ast.Statement, bool) {
 	p.next() // eat ret
-	r := &ast.ReturnStmt{}
+	r := &ast.Return{}
 	if p.peek().Type != token.EOL {
 		r.Vals, _ = p.parseExprList()
 	}
@@ -608,7 +608,7 @@ func (p *parser) parseReturnStmt() (ast.Statement, bool) {
 func (p *parser) parseDeferStmt() (ast.Statement, bool) {
 	p.next() // eat defer
 	ex, _ := p.parseExpr()
-	d := &ast.DeferStmt{Expr: ex}
+	d := &ast.Defer{Expr: ex}
 	if succ, toks := p.accept(token.EOL); !succ {
 		d.Expr, _ = p.errorExpr(true, "Invalid token in defer statement: %v", toks[len(toks)-1])
 	}
@@ -810,7 +810,7 @@ func (p *parser) parseFuncDef(dotted bool, name string) (ast.Statement, bool) {
 	if succ, toks := p.accept(token.LEFT_PAREN); !succ {
 		return p.errorStmt(true, "Invalid token in function definition: %v", toks[len(toks)-1])
 	}
-	f := &ast.FuncDef{Static: !dotted, Name: name}
+	f := &ast.FunctionDef{Static: !dotted, Name: name}
 	for p.peek().Type != token.RIGHT_PAREN {
 		succ, toks := p.accept(token.IDENTIFIER)
 		if !succ {
@@ -1018,13 +1018,13 @@ func (p *parser) parseAccessorStmt(lhs ast.Expression) (ast.Expression, bool) {
 	}
 
 	if isRange {
-		return &ast.AccessorRangeExpr{Object: lhs, Low: low, High: high}, false
+		return &ast.AccessorRange{Object: lhs, Low: low, High: high}, false
 	}
-	return &ast.AccessorExpr{Object: lhs, Index: low}, false
+	return &ast.Accessor{Object: lhs, Index: low}, false
 }
 
 func (p *parser) parseFuncCallStmt(lhs ast.Expression) (ast.Expression, bool) {
-	fc := &ast.FuncCallExpr{Function: lhs}
+	fc := &ast.FunctionCall{Function: lhs}
 	fc.Params, _ = p.parseMLExprList(token.LEFT_PAREN, token.RIGHT_PAREN)
 	return fc, false
 }
@@ -1032,7 +1032,7 @@ func (p *parser) parseFuncCallStmt(lhs ast.Expression) (ast.Expression, bool) {
 func (p *parser) parseUnaryExpr() (ast.Expression, bool) {
 	op := p.next().Type
 	ex, _ := p.parsePrimaryExpr()
-	return &ast.UnaryExpr{Expr: ex, Op: op}, false
+	return &ast.Unary{Expr: ex, Op: op}, false
 }
 
 func (p *parser) parseParenExpr() (ast.Expression, bool) {
@@ -1045,7 +1045,7 @@ func (p *parser) parseParenExpr() (ast.Expression, bool) {
 }
 
 func (p *parser) parseIdentExpr() (ast.Expression, bool) {
-	ie := &ast.IdentExpr{}
+	ie := &ast.Identifier{}
 	for {
 		succ, toks := p.accept(token.IDENTIFIER)
 		if !succ {
@@ -1075,29 +1075,29 @@ func (p *parser) parseIdentExpr() (ast.Expression, bool) {
 }
 
 func (p *parser) parseBoolExpr() (ast.Expression, bool) {
-	return &ast.BoolExpr{Val: p.next().Type == token.TRUE}, false
+	return &ast.Bool{Val: p.next().Type == token.TRUE}, false
 }
 
 func (p *parser) parseCharExpr() (ast.Expression, bool) {
-	return &ast.CharExpr{Val: p.next().Val}, false
+	return &ast.Char{Val: p.next().Val}, false
 }
 
 func (p *parser) parseNumberExpr() (ast.Expression, bool) {
-	return &ast.NumberExpr{Val: p.next().Val}, false
+	return &ast.Number{Val: p.next().Val}, false
 }
 
 func (p *parser) parseIotaExpr() (ast.Expression, bool) {
 	p.next() // eat iota
-	return &ast.IotaExpr{}, false
+	return &ast.Iota{}, false
 }
 
 func (p *parser) parseBlankExpr() (ast.Expression, bool) {
 	p.next() // eat _
-	return &ast.BlankExpr{}, false
+	return &ast.Blank{}, false
 }
 
 func (p *parser) parseStringExpr() (ast.Expression, bool) {
-	return &ast.StringExpr{Val: p.next().Val}, false
+	return &ast.String{Val: p.next().Val}, false
 }
 
 func (p *parser) parseExpr() (ast.Expression, bool) {
@@ -1136,7 +1136,7 @@ func (p *parser) parseBinopRHS(exprPrec int, lhs ast.Expression) (ast.Expression
 		}
 
 		// Merge lhs/rhs
-		lhs = &ast.BinaryExpr{Op: op.Type, Left: lhs, Right: rhs}
+		lhs = &ast.Binary{Op: op.Type, Left: lhs, Right: rhs}
 	}
 }
 
@@ -1144,7 +1144,7 @@ func (p *parser) parseIotaStmt() (ast.Statement, bool) {
 	if succ, toks := p.accept(token.IOTA, token.EOL); !succ {
 		return p.errorStmt(true, "Invalid token in iota reset: %v", toks[len(toks)-1])
 	}
-	return &ast.IotaStmt{}, false
+	return &ast.Iota{}, false
 }
 
 func (p *parser) parseTypeIdent() (ast.Statement, bool) {

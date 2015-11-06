@@ -1,4 +1,8 @@
 
 main
-	main()
-		_
+	first = iota
+	second
+	
+	iota
+	firstThing = iota
+	secondThing
