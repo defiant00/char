@@ -38,30 +38,30 @@ func (this *String) isExpr()         {}
 func (this *Unary) isExpr()          {}
 
 // Statements
-func (this *Array) isStmt()        {}
-func (this *Assign) isStmt()       {}
-func (this *Break) isStmt()        {}
-func (this *Class) isStmt()        {}
-func (this *Defer) isStmt()        {}
-func (this *Error) isStmt()        {}
-func (this *ExprStmt) isStmt()     {}
-func (this *For) isStmt()          {}
-func (this *FunctionDef) isStmt()  {}
-func (this *FunctionSig) isStmt()  {}
-func (this *If) isStmt()           {}
-func (this *Interface) isStmt()    {}
-func (this *IntfFuncSig) isStmt()  {}
-func (this *Iota) isStmt()         {}
-func (this *Is) isStmt()           {}
-func (this *KeyVal) isStmt()       {}
-func (this *Loop) isStmt()         {}
-func (this *PropertySet) isStmt()  {}
-func (this *Return) isStmt()       {}
-func (this *TypeIdent) isStmt()    {}
-func (this *TypeRedirect) isStmt() {}
-func (this *Use) isStmt()          {}
-func (this *VarSet) isStmt()       {}
-func (this *VarSetLine) isStmt()   {}
+func (this *Alias) isStmt()       {}
+func (this *Array) isStmt()       {}
+func (this *Assign) isStmt()      {}
+func (this *Break) isStmt()       {}
+func (this *Class) isStmt()       {}
+func (this *Defer) isStmt()       {}
+func (this *Error) isStmt()       {}
+func (this *ExprStmt) isStmt()    {}
+func (this *For) isStmt()         {}
+func (this *FunctionDef) isStmt() {}
+func (this *FunctionSig) isStmt() {}
+func (this *If) isStmt()          {}
+func (this *Interface) isStmt()   {}
+func (this *IntfFuncSig) isStmt() {}
+func (this *Iota) isStmt()        {}
+func (this *Is) isStmt()          {}
+func (this *KeyVal) isStmt()      {}
+func (this *Loop) isStmt()        {}
+func (this *PropertySet) isStmt() {}
+func (this *Return) isStmt()      {}
+func (this *TypeIdent) isStmt()   {}
+func (this *Use) isStmt()         {}
+func (this *VarSet) isStmt()      {}
+func (this *VarSetLine) isStmt()  {}
 
 type Accessor struct {
 	Object Expression
@@ -71,6 +71,11 @@ type Accessor struct {
 type AccessorRange struct {
 	Object    Expression
 	Low, High Expression
+}
+
+type Alias struct {
+	Val   Statement
+	Alias string
 }
 
 type ArrayCons struct {
@@ -464,11 +469,6 @@ func (this *TypeIdent) AddIdent(ident string) {
 
 func (this *TypeIdent) AddTypeParam(s Statement) {
 	this.typeParams = append(this.typeParams, s)
-}
-
-type TypeRedirect struct {
-	Type Statement
-	Name string
 }
 
 type Unary struct {

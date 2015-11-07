@@ -156,7 +156,7 @@ func (p *parser) parseFile() ast.General {
 			st, _ := p.parseTopLevelIdent()
 			f.AddStmt(st)
 		case token.FUNCTION:
-			st, _ := p.parseTypeRedirect()
+			st, _ := p.parseAlias()
 			f.AddStmt(st)
 		case token.USE:
 			st, _ := p.parseUse()
@@ -241,16 +241,16 @@ func (p *parser) parseInterface() (ast.Statement, bool) {
 }
 
 func (p *parser) parseTopLevelIdent() (ast.Statement, bool) {
-	if p.isTypeRedirect() {
-		return p.parseTypeRedirect()
+	if p.isAlias() {
+		return p.parseAlias()
 	}
 	return p.parseClass(false)
 }
 
-// isTypeRedirect returns whether a line of tokens is a type redirect.
+// isAlias returns whether a line of tokens is an alias.
 // It reads through tokens until it encounters an EOL. During that time,
 // if it encounters an AS it returns true, otherwise false.
-func (p *parser) isTypeRedirect() bool {
+func (p *parser) isAlias() bool {
 	count := 0
 	for p.peek().Type != token.EOL {
 		if p.peek().Type == token.AS {
@@ -269,20 +269,20 @@ func (p *parser) parseMixin() (ast.Statement, bool) {
 	return p.parseClass(true)
 }
 
-func (p *parser) parseTypeRedirect() (ast.Statement, bool) {
+func (p *parser) parseAlias() (ast.Statement, bool) {
 	st, _ := p.parseType()
-	t := &ast.TypeRedirect{Type: st}
+	a := &ast.Alias{Val: st}
 
 	if succ, toks := p.accept(token.AS); !succ {
-		return p.errorStmt(true, "Invalid token in type redirect: %v", toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in alias: %v", toks[len(toks)-1])
 	}
 
 	succ, toks := p.accept(token.IDENTIFIER, token.EOL)
 	if !succ {
-		return p.errorStmt(true, "Invalid token in type redirect: %v", toks[len(toks)-1])
+		return p.errorStmt(true, "Invalid token in alias: %v", toks[len(toks)-1])
 	}
-	t.Name = toks[0].Val
-	return t, false
+	a.Alias = toks[0].Val
+	return a, false
 }
 
 func (p *parser) parseType() (ast.Statement, bool) {

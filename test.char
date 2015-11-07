@@ -1,4 +1,11 @@
 
+prelude.Range as range
+
+fn(int) int as someFunc
+
+list<list<int>> as iiList
+
+
 main
 	first = iota
 	second

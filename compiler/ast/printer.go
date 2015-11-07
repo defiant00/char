@@ -44,6 +44,9 @@ func Print(obj General, indent int) {
 			printIndent(indent + 2)
 			fmt.Println("implicit length - 1")
 		}
+	case *Alias:
+		this := obj.(*Alias)
+		fmt.Printf("%v as %v\n", this.Val, this.Alias)
 	case *ArrayCons:
 		this := obj.(*ArrayCons)
 		fmt.Println(this)
@@ -261,9 +264,6 @@ func Print(obj General, indent int) {
 		Print(obj.(*Return).Vals, indent+1)
 	case *String:
 		fmt.Printf("string '%v'\n", obj.(*String).Val)
-	case *TypeRedirect:
-		this := obj.(*TypeRedirect)
-		fmt.Printf("%v as %v\n", this.Type, this.Name)
 	case *Unary:
 		this := obj.(*Unary)
 		fmt.Println(this.Op)
